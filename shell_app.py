@@ -1,3 +1,7 @@
+import subprocess
+import argparse
+import sys
+import os
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, VerticalScroll
 from textual.widgets import Button, Footer, Header, Static
@@ -45,6 +49,10 @@ class ShellApp(App):
         "show_python_version": "python --version",
     }
 
+    # These will be set dynamically when the app is launched by the main script logic
+    TMUX_TARGET_PANE: str | None = None
+    TMUX_SESSION_NAME: str | None = None
+
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         yield Header()
@@ -67,11 +75,124 @@ class ShellApp(App):
             command_to_run = self.COMMANDS.get(cmd_key)
             
             if command_to_run:
-                # The Terminal widget has been removed, so we can't send commands to it.
-                # You could add logging here if desired, e.g.:
-                # self.log(f"Button '{event.button.label}' pressed. Intended command: {command_to_run}")
-                pass
+                if self.TMUX_TARGET_PANE:
+                    try:
+                        # Send the command string
+                        subprocess.run(
+                            ["tmux", "send-keys", "-t", self.TMUX_TARGET_PANE, command_to_run],
+                            check=True, capture_output=True
+                        )
+                        # Send the "Enter" key to execute the command
+                        subprocess.run(
+                            ["tmux", "send-keys", "-t", self.TMUX_TARGET_PANE, "Enter"],
+                            check=True, capture_output=True
+                        )
+                        self.log(f"Sent command to tmux pane {self.TMUX_TARGET_PANE}: {command_to_run}")
+                    except FileNotFoundError:
+                        self.log.error("Error: tmux command not found. Is tmux installed and in PATH?")
+                    except subprocess.CalledProcessError as e:
+                        self.log.error(f"Error sending command to tmux: {e.stderr.decode() if e.stderr else e}")
+                else:
+                    self.log.warning("TMUX_TARGET_PANE is not set. Cannot send command.")
+
+    async def action_custom_quit(self) -> None:
+        """Custom quit action that also attempts to kill the tmux session."""
+        if self.TMUX_SESSION_NAME:
+            try:
+                subprocess.run(
+                    ["tmux", "kill-session", "-t", self.TMUX_SESSION_NAME],
+                    check=True, capture_output=True
+                )
+                self.log(f"Sent kill-session for tmux session: {self.TMUX_SESSION_NAME}")
+            except FileNotFoundError:
+                self.log.error("Error: tmux command not found when trying to kill session.")
+            except subprocess.CalledProcessError as e:
+                # Log error, but proceed to quit app anyway
+                self.log.error(f"Error killing tmux session '{self.TMUX_SESSION_NAME}': {e.stderr.decode() if e.stderr else e}")
+        
+        self.app.exit() # Proceed with normal app quit
 
 if __name__ == "__main__":
-    app = ShellApp()
-    app.run()
+    parser = argparse.ArgumentParser(description="Run ShellApp, optionally managing a tmux session.")
+    parser.add_argument(
+        "--run-in-tmux-pane",
+        action="store_true",
+        help="Flag to indicate the app is being run inside a designated tmux pane."
+    )
+    parser.add_argument(
+        "--target-pane",
+        type=str,
+        help="The tmux target pane ID for sending commands (e.g., session_name:window.pane)."
+    )
+    parser.add_argument(
+        "--session-name",
+        type=str,
+        help="The tmux session name to be managed/killed."
+    )
+    
+    args = parser.parse_args()
+
+    # Use a consistent session name, whether passed or defined
+    # If --session-name is provided (when run inside tmux), use that. Otherwise, use default.
+    SESSION_NAME = args.session_name if args.session_name else "textual_shell_app"
+
+
+    if args.run_in_tmux_pane:
+        # This branch is executed when the script is run by tmux to host the Textual app
+        if not args.target_pane:
+            print("Error: --target-pane is required when --run-in-tmux-pane is set.", file=sys.stderr)
+            sys.exit(1)
+        if not args.session_name: # session_name is crucial for the kill-session functionality
+            print("Error: --session-name is required when --run-in-tmux-pane is set.", file=sys.stderr)
+            sys.exit(1)
+
+        ShellApp.TMUX_TARGET_PANE = args.target_pane
+        ShellApp.TMUX_SESSION_NAME = args.session_name # Pass session name to app
+        app = ShellApp()
+        app.run()
+    else:
+        # This branch is executed when the user runs `python shell_app.py`
+        # It sets up or attaches to the tmux session.
+
+        shell_pane_target = f"{SESSION_NAME}:0.0"  # Shell will be in pane 0 of window 0
+        app_pane_target = f"{SESSION_NAME}:0.1"    # App will be in pane 1 of window 0 (to the right)
+
+        try:
+            # Check if the tmux session already exists
+            session_exists_check = subprocess.run(
+                ["tmux", "has-session", "-t", SESSION_NAME],
+                capture_output=True, text=True
+            )
+
+            if session_exists_check.returncode != 0:
+                # Session does not exist, create and configure it
+                print(f"Creating and configuring new tmux session: {SESSION_NAME}")
+                # Create a new detached session. The first window (0) and pane (0) gets default shell.
+                subprocess.run(["tmux", "new-session", "-d", "-s", SESSION_NAME, "-n", "main"], check=True)
+                
+                # Split pane 0.0 (shell_pane_target) horizontally. New pane (app_pane_target) is to the right.
+                subprocess.run(["tmux", "split-window", "-h", "-t", shell_pane_target], check=True)
+                
+                # Construct the command to run this script (shell_app.py) inside the app_pane_target
+                # This recursive call will have --run-in-tmux-pane and --session-name set.
+                app_command = (
+                    f"{sys.executable} {os.path.abspath(sys.argv[0])} "
+                    f"--run-in-tmux-pane "
+                    f"--target-pane {shell_pane_target} "
+                    f"--session-name {SESSION_NAME}"
+                )
+                subprocess.run(["tmux", "send-keys", "-t", app_pane_target, app_command, "Enter"], check=True)
+            else:
+                print(f"Attaching to existing tmux session: {SESSION_NAME}")
+
+            # Attach to the session (either newly created or existing)
+            # os.execvp replaces the current python process with tmux,
+            # so when tmux exits, the script is done.
+            os.execvp("tmux", ["tmux", "attach-session", "-t", SESSION_NAME])
+
+        except FileNotFoundError:
+            print("Error: tmux command not found. Please ensure tmux is installed and in your PATH.", file=sys.stderr)
+            sys.exit(1)
+        except subprocess.CalledProcessError as e:
+            print(f"Error during tmux setup: {e.stderr.decode() if e.stderr else e}", file=sys.stderr)
+            sys.exit(1)
