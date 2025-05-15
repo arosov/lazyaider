@@ -185,6 +185,9 @@ if __name__ == "__main__":
             else:
                 print(f"Attaching to existing tmux session: {SESSION_NAME}")
 
+            # Select the shell pane to ensure it has focus on attach
+            subprocess.run(["tmux", "select-pane", "-t", shell_pane_target], check=True)
+
             # Attach to the session (either newly created or existing)
             # os.execvp replaces the current python process with tmux,
             # so when tmux exits, the script is done.
