@@ -1,6 +1,7 @@
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, VerticalScroll
-from textual.widgets import Button, Footer, Header, Terminal, Static
+from textual.widgets import Button, Footer, Header, Static
+from textual.widgets.terminal import Terminal
 
 class ShellApp(App):
     """A Textual application to manage a shell session with a command sidebar."""
