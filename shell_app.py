@@ -169,6 +169,9 @@ if __name__ == "__main__":
                 print(f"Creating and configuring new tmux session: {SESSION_NAME}")
                 # Create a new detached session. The first window (0) and pane (0) gets default shell.
                 subprocess.run(["tmux", "new-session", "-d", "-s", SESSION_NAME, "-n", "main"], check=True)
+
+                # Enable mouse mode for the session (includes focus follows mouse for panes)
+                subprocess.run(["tmux", "set-option", "-g", "mouse", "on"], check=True)
                 
                 # Split pane 0.0 (shell_pane_target) horizontally. New pane (app_pane_target) is to the right.
                 subprocess.run(["tmux", "split-window", "-h", "-t", shell_pane_target], check=True)
