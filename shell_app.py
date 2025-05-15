@@ -6,6 +6,9 @@ class ShellApp(App):
     """A Textual application to manage a shell session with a command sidebar."""
 
     TITLE = "Textual Shell"
+    BINDINGS = [
+        ("ctrl+c", "custom_quit", "Quit App & Tmux Session")
+    ]
     CSS = """
     Screen {
         layout: vertical;
