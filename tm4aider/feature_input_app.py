@@ -1,3 +1,4 @@
+import functools # Add this import
 from textual.app import App, ComposeResult
 from textual.containers import Vertical, Horizontal
 from textual.widgets import Header, Footer, Button, Static, TextArea, LoadingIndicator
@@ -124,7 +125,10 @@ class FeatureInputApp(App[str | None]):
             # Run generate_plan in a worker thread to avoid blocking UI
             if self._llm_worker is not None: # Should not happen, but good practice
                 await self._llm_worker.cancel()
-            self._llm_worker = self.run_worker(self._call_generate_plan, description, thread=True)
+            # Use functools.partial to correctly pass the 'description' argument
+            # when _call_generate_plan is invoked by the worker.
+            bound_call_generate_plan = functools.partial(self._call_generate_plan, description)
+            self._llm_worker = self.run_worker(bound_call_generate_plan, thread=True)
 
         elif button_id == "cancel_initial_button":
             self.exit(None) # Exit without a plan
