@@ -1,8 +1,10 @@
-import functools # Add this import
+import functools
+import time # Add this import
 from textual.app import App, ComposeResult
 from textual.containers import Vertical, Horizontal
 from textual.widgets import Header, Footer, Button, Static, TextArea, LoadingIndicator
-from textual.worker import Worker # Removed WorkerState as it's not directly used
+from textual.worker import Worker
+from textual.timer import Timer # Add this import
 
 # Import the LLM planner function and config
 from .llm_planner import generate_plan
@@ -28,6 +30,8 @@ class FeatureInputApp(App[str | None]):
         self.current_ui_state = self.STATE_INPUT_FEATURE
         self.generated_plan_content: str | None = None
         self._llm_worker: Worker | None = None
+        self._start_time: float | None = None
+        self._loading_timer: Timer | None = None
 
 
     def compose(self) -> ComposeResult:
@@ -123,14 +127,19 @@ class FeatureInputApp(App[str | None]):
             # Get model name for display
             current_model_name = config.settings.get("llm_model", "Unknown Model")
             loading_text_widget = self.query_one("#loading_subtext", Static)
+            # Initial message, timer will update it with elapsed time
             loading_text_widget.update(f"Generating plan with {current_model_name}, please wait...")
             
+            self._start_time = time.monotonic()
+            if self._loading_timer is not None:
+                self._loading_timer.stop() # Should not be running, but good practice
+            self._loading_timer = self.set_interval(0.1, self._update_loading_time) # Update frequently for smoothness
+
             self._set_ui_state(self.STATE_LOADING_PLAN)
-            # Run generate_plan in a worker thread to avoid blocking UI
+            
             if self._llm_worker is not None: # Should not happen, but good practice
                 await self._llm_worker.cancel()
-            # Use functools.partial to correctly pass the 'description' argument
-            # when _call_generate_plan is invoked by the worker.
+            
             bound_call_generate_plan = functools.partial(self._call_generate_plan, description)
             self._llm_worker = self.run_worker(bound_call_generate_plan, thread=True)
 
@@ -177,9 +186,34 @@ class FeatureInputApp(App[str | None]):
             self.generated_plan_content = plan_data # Store the error message
             plan_display_widget.load_text(plan_data)
         
+        if self._loading_timer is not None:
+            self._loading_timer.stop()
+            self._loading_timer = None
+        
+        total_elapsed_time_str = ""
+        if self._start_time is not None:
+            total_elapsed_time = time.monotonic() - self._start_time
+            total_elapsed_time_str = f"\nTime taken: {total_elapsed_time:.2f} seconds"
+            self._start_time = None # Reset for next run
+
+        if isinstance(plan_data, tuple):
+            # Append time taken to the existing display_text
+            current_text = plan_display_widget.text
+            plan_display_widget.load_text(current_text + total_elapsed_time_str)
+        # If it was an error string, it's already loaded. We could append time too if desired.
+        # For now, only appending to successful plan display.
+
         self._set_ui_state(self.STATE_DISPLAY_PLAN)
         # Reset loading subtext for next time
         self.query_one("#loading_subtext", Static).update("This may take a moment. Press Esc to try and cancel.")
+
+    def _update_loading_time(self) -> None:
+        """Periodically updates the loading subtext with elapsed time."""
+        if self._start_time is not None and self.current_ui_state == self.STATE_LOADING_PLAN:
+            elapsed_time = time.monotonic() - self._start_time # Corrected self_start_time to self._start_time
+            current_model_name = config.settings.get("llm_model", "Unknown Model")
+            loading_text_widget = self.query_one("#loading_subtext", Static)
+            loading_text_widget.update(f"Generating plan with {current_model_name}, please wait... (Elapsed: {elapsed_time:.1f}s)")
 
 
     async def action_request_quit_or_reset(self) -> None:
@@ -188,14 +222,17 @@ class FeatureInputApp(App[str | None]):
             # On plan display, Esc discards and exits (same as "Discard & Exit" button)
             self.exit(None)
         elif self.current_ui_state == self.STATE_LOADING_PLAN:
+            if self._loading_timer is not None:
+                self._loading_timer.stop()
+                self._loading_timer = None
+            self._start_time = None
+
             if self._llm_worker is not None:
                 await self._llm_worker.cancel() # Attempt to cancel the worker
                 self._llm_worker = None
-                # Optionally, provide feedback that cancellation was attempted
-                self.query_one("#loading_subtext").update("Cancellation requested... returning to input.")
-                # Give a moment for any cancellation to process before switching state
-                self.set_timer(0.5, lambda: self._set_ui_state(self.STATE_INPUT_FEATURE))
-            else: # Should not happen if worker is active
+                self.query_one("#loading_subtext", Static).update("Cancellation requested... returning to input.")
+                self.set_timer(0.5, lambda: self._set_ui_state(self.STATE_INPUT_FEATURE)) # Give time for UI update
+            else: 
                 self._set_ui_state(self.STATE_INPUT_FEATURE)
         else: # STATE_INPUT_FEATURE
             self.exit(None)
