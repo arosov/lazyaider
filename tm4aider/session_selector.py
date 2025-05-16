@@ -118,9 +118,9 @@ class SessionSelectorApp(App[str | None]):
     """A Textual app to select an existing tmux session or create/rename one."""
 
     TITLE = "TM4Aider Session Management"
-    # BINDINGS = [
-    #     Binding("escape", "action_custom_quit", "Cancel/Quit", show=False, priority=True), # Example
-    # ]
+    BINDINGS = [
+        Binding("enter", "select_session", "Use Selected", show=False, priority=True),
+    ]
     CSS = """
     Screen {
         align: center middle;
@@ -206,10 +206,16 @@ class SessionSelectorApp(App[str | None]):
     def on_mount(self) -> None:
         """Called when app is mounted."""
         if self.active_sessions:
-            self.query_one(ListView).focus()
-            # Buttons related to selection start disabled as nothing is selected yet
-            self.query_one("#btn_use_selected", Button).disabled = True
-            self.query_one("#btn_rename_selected", Button).disabled = True
+            list_view = self.query_one(ListView)
+            if list_view.children: # Check if there are items in the list view
+                list_view.index = 0 # Select the first item
+                # on_list_view_selected will be triggered, setting selected_session_name and enabling buttons.
+            list_view.focus() # Ensure the list view has focus for keyboard navigation
+            # If list_view.index was set, on_list_view_selected handles button states.
+            # If list was empty (though self.active_sessions was true), buttons remain disabled.
+            if not list_view.children or list_view.index is None or list_view.index < 0 :
+                 self.query_one("#btn_use_selected", Button).disabled = True
+                 self.query_one("#btn_rename_selected", Button).disabled = True
         else:
             # No sessions, focus on create new button
             self.query_one("#btn_create_new", Button).focus()
@@ -350,6 +356,14 @@ class SessionSelectorApp(App[str | None]):
 
         elif button_id == "btn_cancel":
             self.exit(None) # Exit the app, returning None
+
+    async def action_select_session(self) -> None:
+        """Action bound to the Enter key. Uses the currently selected session."""
+        if self.selected_session_name:
+            self.exit(self.selected_session_name)
+        # If no session is selected, Enter effectively does nothing in this context,
+        # or rather, it won't trigger an exit. Default Textual behavior for Enter might occur
+        # depending on focus (e.g., activating a focused button).
 
 if __name__ == "__main__":
     # Example usage:
