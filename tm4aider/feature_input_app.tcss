@@ -50,7 +50,7 @@ TextArea {
 }
 
 TextArea:focus {
-    border: round $primary-focus;
+    border: round $primary; /* Use defined variable $primary */
 }
 
 /* Styling for error state on TextArea */
