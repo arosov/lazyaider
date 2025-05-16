@@ -167,8 +167,3 @@ if __name__ == "__main__":
     # For now, this just shows how it would be called.
     # selected_valid_new = app_valid_new.run()
     # print(f"Selected session (valid new): {selected_valid_new}")
-from tm4aider.sidebar import Sidebar
-from tm4aider.tmux_sidebar import manage_tmux_session # New import
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run TM4Aider")
