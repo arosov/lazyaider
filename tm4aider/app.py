@@ -4,10 +4,10 @@ from textual.containers import Horizontal, VerticalScroll
 from textual.widgets import Button, Footer, Header, Static
 from tm4aider import tmux_utils
 
-class TM4Aider(App):
+class Sidebar(App):
     """Task Manager for Aider coding assistant"""
 
-    TITLE = "TM4Aider"
+    TITLE = "Sidebar"
     BINDINGS = []  # Removed Ctrl+C binding
     CSS = """
     Screen {

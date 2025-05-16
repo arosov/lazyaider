@@ -3,7 +3,7 @@ import argparse
 import sys
 import os
 from tm4aider import tmux_utils
-from tm4aider.app import TM4Aider
+from tm4aider.app import Sidebar
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run TM4Aider, optionally managing a tmux session.")
@@ -39,9 +39,9 @@ if __name__ == "__main__":
             print("Error: --session-name is required when --run-in-tmux-pane is set.", file=sys.stderr)
             sys.exit(1)
 
-        TM4Aider.TMUX_TARGET_PANE = args.target_pane
-        TM4Aider.TMUX_SESSION_NAME = args.session_name # Pass session name to app
-        app = TM4Aider()
+        Sidebar.TMUX_TARGET_PANE = args.target_pane
+        Sidebar.TMUX_SESSION_NAME = args.session_name # Pass session name to app
+        app = Sidebar()
         app.run()
     else:
         # This branch is executed when the user runs `python shell_app.py`
