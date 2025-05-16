@@ -156,8 +156,8 @@ if __name__ == "__main__":
                 # Create a new detached session. The first window (0) and pane (0) gets default shell.
                 subprocess.run(["tmux", "new-session", "-d", "-s", SESSION_NAME, "-n", "main"], check=True)
 
-                # Split pane 0.0 (shell_pane_target) horizontally. New pane (app_pane_target) is to the right, taking 20% width.
-                subprocess.run(["tmux", "split-window", "-h", "-t", shell_pane_target], check=True)
+                # Split pane 0.0 (shell_pane_target) horizontally. New pane (app_pane_target) is to the right, taking 10% width.
+                subprocess.run(["tmux", "split-window", "-h", "-l", "10%", "-t", shell_pane_target], check=True)
                 # Construct the command to run this script (shell_app.py) inside the app_pane_target
                 # This recursive call will have --run-in-tmux-pane and --session-name set.
                 app_command = (
