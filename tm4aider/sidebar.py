@@ -65,7 +65,7 @@ class Sidebar(App):
             # Only save if it's not one of the built-in ones handled by watch_dark
             if new_theme not in ("light", "dark"):
                 app_config_module.update_theme_in_config(new_theme)
-    
+
     def watch_dark(self, dark: bool) -> None:
         """Saves the theme ("light" or "dark") when App.dark changes."""
         from tm4aider import config as app_config_module
@@ -132,7 +132,6 @@ class Sidebar(App):
             try:
                 tmux_utils.kill_session(session_to_kill)
                 self.log(f"Sent kill-session for tmux session: {session_to_kill}")
-                
                 # Remove from config after successful kill
                 # Requires config module and settings to be accessible
                 from tm4aider import config as app_config # late import

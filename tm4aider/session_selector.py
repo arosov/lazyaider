@@ -42,7 +42,6 @@ class RenameSessionScreen(ModalScreen[str | None]):
     Input { /* Style for Input within this modal */
         margin-bottom: 1;
     }
-    
     .button_row { /* Style for button row within this modal */
         width: 100%;
         align-horizontal: center; /* Center buttons horizontally */
@@ -82,7 +81,6 @@ class RenameSessionScreen(ModalScreen[str | None]):
         if event.button.id == "btn_rename_modal":
             input_widget = self.query_one("#new_session_name_input_modal", Input)
             new_name = input_widget.value.strip()
-            
             validation_result = input_widget.validate(new_name)
             if not validation_result or not validation_result.is_valid:
                 input_widget.border_title = "Validation Error"
@@ -186,7 +184,6 @@ class SessionSelectorApp(App[str | None]):
         """Generates a unique name: base_name, then base_name-1, base_name-2, etc."""
         if base_name not in existing_names:
             return base_name
-        
         i = 1
         # Loop indefinitely until a unique name is found.
         while True:
@@ -203,13 +200,12 @@ class SessionSelectorApp(App[str | None]):
             if self.active_sessions:
                 yield Label("Active Sessions:")
                 # ListView will be populated by _populate_session_list if needed
-                with ListView(id="session_list_view"): 
+                with ListView(id="session_list_view"):
                     for session in self.active_sessions:
                         list_item = ListItem(Label(session), name=session)
                         yield list_item
             else:
                 yield Static("No active managed sessions found.")
-            
             # Buttons for actions
             with Container(classes="button_row"):
                 yield Button("Use Selected", id="btn_use_selected", variant="primary", disabled=True)
@@ -224,7 +220,6 @@ class SessionSelectorApp(App[str | None]):
         # Apply theme from config when app is mounted
         from tm4aider import config as app_config_module
         theme_name_from_config = app_config_module.settings.get("theme_name", app_config_module.DEFAULT_THEME_NAME)
-        
         if theme_name_from_config == "dark":
             self.dark = True
         elif theme_name_from_config == "light":
@@ -243,7 +238,6 @@ class SessionSelectorApp(App[str | None]):
 
         if list_view and list_view.children: # Active sessions exist and ListView is populated.
             list_view.index = 0 # Select the first item.
-            
             # Manually update selection state and button states, as setting index
             # programmatically doesn't fire the on_list_view_selected event.
             first_item_widget = list_view.children[0]
@@ -256,7 +250,6 @@ class SessionSelectorApp(App[str | None]):
                 self.selected_session_name = None # Ensure it's cleared
                 self.query_one("#btn_use_selected", Button).disabled = True
                 self.query_one("#btn_rename_selected", Button).disabled = True
-            
             list_view.focus()
         else:
             # This block covers:
@@ -280,7 +273,7 @@ class SessionSelectorApp(App[str | None]):
             for session_name in self.active_sessions:
                 list_item = ListItem(Label(session_name), name=session_name)
                 list_view.append(list_item)
-        except NoMatches: 
+        except NoMatches:
             # This might happen if the list view isn't present (e.g. no active sessions at start)
             # Or if called at an unexpected time.
             pass
@@ -291,13 +284,12 @@ class SessionSelectorApp(App[str | None]):
             self.selected_session_name = event.item.name
             self.query_one("#btn_use_selected", Button).disabled = False
             self.query_one("#btn_rename_selected", Button).disabled = False
-        else: 
+        else:
             # This case (no item.name) should ideally not happen if an item is truly selected.
             # Safety net:
             self.selected_session_name = None
             self.query_one("#btn_use_selected", Button).disabled = True
             self.query_one("#btn_rename_selected", Button).disabled = True
-    
     def _clear_selection_effects(self) -> None:
         """Clears current selection state and disables related buttons."""
         self.selected_session_name = None
@@ -305,7 +297,7 @@ class SessionSelectorApp(App[str | None]):
             list_view = self.query_one(ListView)
             list_view.index = -1 # Deselects in the ListView widget
         except NoMatches:
-            pass 
+            pass
         self.query_one("#btn_use_selected", Button).disabled = True
         self.query_one("#btn_rename_selected", Button).disabled = True
 
@@ -313,7 +305,6 @@ class SessionSelectorApp(App[str | None]):
         """Callback function executed after the RenameSessionScreen is dismissed."""
         if new_name and self.selected_session_name: # new_name is not None and a session was selected for rename
             old_name = self.selected_session_name
-            
             if old_name == new_name: # No actual change in name
                 # Optionally, re-focus list view or provide feedback
                 self.query_one(ListView).focus()
@@ -336,10 +327,8 @@ class SessionSelectorApp(App[str | None]):
                     original_name_for_old_session = original
                     break
             self.renamed_map[original_name_for_old_session] = new_name
-            
             # Refresh the ListView to show the new name
             self._populate_session_list()
-            
             # Try to re-select the newly renamed item in the ListView
             try:
                 list_view = self.query_one(ListView)
@@ -348,7 +337,7 @@ class SessionSelectorApp(App[str | None]):
                     if isinstance(child_item, ListItem) and child_item.name == new_name:
                         new_item_index = i
                         break
-                
+
                 if new_item_index != -1:
                     list_view.index = new_item_index # Highlight the item
                     self.selected_session_name = new_name # Update internal selection state
@@ -361,7 +350,7 @@ class SessionSelectorApp(App[str | None]):
                     self._clear_selection_effects() # Clear selection as a fallback
             except NoMatches: # Should not happen if list_view exists
                  self._clear_selection_effects()
-        
+
         # If new_name is None (modal was cancelled), selection remains as it was.
         # Ensure focus returns to an appropriate widget in the main app.
         try:
@@ -381,7 +370,7 @@ class SessionSelectorApp(App[str | None]):
             else:
                 # This should not be reachable if button is properly disabled.
                 self.notify("Please select a session from the list first.", title="Selection Required", severity="warning")
-        
+
         elif button_id == "btn_rename_selected":
             if self.selected_session_name:
                 # Pass other existing session names for validation in the modal
@@ -398,7 +387,7 @@ class SessionSelectorApp(App[str | None]):
             # Generate a unique name based on the default and current active sessions
             new_session_name = self._generate_unique_name_from_base(
                 self.default_session_basename,
-                self.active_sessions 
+                self.active_sessions
             )
             # Exit with the new session name. The caller (tm4aider.py) will handle
             # the actual creation and config update.
@@ -419,14 +408,13 @@ if __name__ == "__main__":
     # Example usage:
     example_default_basename = "dev-session" # Define a basename for testing
     initial_sessions = ["session-alpha", "another-project", "beta-test", "dev-session", "dev-session-1"]
-    
     print(f"--- Running with initial sessions: {initial_sessions} ---")
     # Pass the default_session_basename to the constructor
     app = SessionSelectorApp(
         active_sessions=initial_sessions,
         default_session_basename=example_default_basename
     )
-    selected_session = app.run() 
+    selected_session = app.run()
     print(f"Selected session: {selected_session}")
     # Check if renamed_map exists and print if it does (it's part of the app instance)
     if selected_session and hasattr(app, 'renamed_map') and app.renamed_map:
@@ -441,5 +429,4 @@ if __name__ == "__main__":
     print(f"Selected session (no initial): {selected_no_sessions}")
     if selected_no_sessions and hasattr(app_no_sessions, 'renamed_map') and app_no_sessions.renamed_map:
         print(f"Renamed map (no initial): {app_no_sessions.renamed_map}")
-    
     # Interactive testing is recommended for the full rename flow.

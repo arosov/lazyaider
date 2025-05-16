@@ -54,7 +54,6 @@ def load_config() -> dict:
         if "theme_name" in config: # Value exists but is not a str
             print(f"Warning: 'theme_name' in {config_path or 'config'} is not a string. Using default value.", file=sys.stderr)
         config["theme_name"] = DEFAULT_THEME_NAME
-    
     return config
 
 def save_config(current_config: dict) -> None:
