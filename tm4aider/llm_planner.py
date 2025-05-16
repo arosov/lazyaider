@@ -109,6 +109,14 @@ def generate_plan(feature_description: str) -> str:
         # Accessing content according to litellm's current typical response structure
         if response.choices and response.choices[0].message and response.choices[0].message.content:
             plan_content = response.choices[0].message.content
+            
+            # Display token usage
+            if response.usage and hasattr(response.usage, 'total_tokens'):
+                total_tokens = response.usage.total_tokens
+                print(f"LLM ({model}) response received. Token usage: {total_tokens} tokens.", file=sys.stderr)
+            else:
+                print(f"LLM ({model}) response received. Token usage information not available in response.", file=sys.stderr)
+                
             return plan_content.strip()
         else:
             error_message = "Error: LLM response structure was unexpected or content was empty."
