@@ -52,7 +52,7 @@ class FeatureInputApp(App[str | None]):
 
             # Loading Indicator Area (State 2)
             with Vertical(id="loading_container", classes="hidden"):
-                yield LoadingIndicator("Generating plan, please wait...")
+                yield LoadingIndicator() # Initialize without default text, just the spinner
                 yield Static("This may take a moment. Press Esc to try and cancel.", id="loading_subtext")
 
             # Plan Display Area (State 3)
