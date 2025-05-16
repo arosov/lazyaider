@@ -11,7 +11,7 @@ from .llm_planner import generate_plan
 from . import config # Import config to access settings like model name
 
 class FeatureInputApp(App[str | None]):
-    """A Textual app to get feature description, generate a plan, and display it."""
+    """Enter feature description, generate a plan, and review it."""
 
     BINDINGS = [
         ("escape", "request_quit_or_reset", "Back/Cancel"),
@@ -40,7 +40,7 @@ class FeatureInputApp(App[str | None]):
         with Vertical(id="app-container"):
             # Feature Input Area (State 1)
             with Vertical(id="feature_input_container"):
-                yield Static("Enter the feature you want to implement:", classes="label", id="feature_label")
+                yield Static("Describe the feature you want to implement:", classes="label", id="feature_label")
                 yield TextArea(
                     id="feature_description_input",
                     language="markdown",
@@ -139,11 +139,11 @@ class FeatureInputApp(App[str | None]):
                 description_area.styles.border_title_color = "red"
                 description_area.styles.border = ("heavy", "red")
                 return
-            
+
             description_area.border_title = None # Reset border title
             # Reset border styles by removing the ones applied for the error state.
             # This allows the default CSS to take over again.
-            description_area.styles.border_type = None 
+            description_area.styles.border_type = None
             description_area.styles.border_title_color = None
             # If you want to be absolutely sure it reverts to the CSS,
             # you might need to re-apply the original CSS border if it was more complex
@@ -160,7 +160,7 @@ class FeatureInputApp(App[str | None]):
             # We can also explicitly remove the 'heavy' and 'red' border if that was the only change.
             # To reset to the CSS-defined style, we clear the inline overrides.
             # Textual will then fall back to the styles defined in feature_input_app.tcss for TextArea.
-            description_area.styles.border_type = None 
+            description_area.styles.border_type = None
             description_area.styles.border_title_color = None
             description_area.styles.border = None # This should make it revert to the CSS `border: round $primary;`
 
@@ -169,17 +169,17 @@ class FeatureInputApp(App[str | None]):
             loading_text_widget = self.query_one("#loading_subtext", Static)
             # Initial message, timer will update it with elapsed time
             loading_text_widget.update(f"Generating plan with {current_model_name}, please wait...")
-            
+
             self._llm_call_start_time = time.monotonic() # Use renamed variable
             if self._loading_timer is not None:
                 self._loading_timer.stop() # Should not be running, but good practice
             self._loading_timer = self.set_interval(0.1, self._update_loading_time) # Update frequently for smoothness
 
             self._set_ui_state(self.STATE_LOADING_PLAN)
-            
+
             if self._llm_worker is not None: # Should not happen, but good practice
                 await self._llm_worker.cancel()
-            
+
             bound_call_generate_plan = functools.partial(self._call_generate_plan, description)
             self._llm_worker = self.run_worker(bound_call_generate_plan, thread=True)
 
@@ -191,7 +191,7 @@ class FeatureInputApp(App[str | None]):
 
         elif button_id == "discard_plan_button":
             self.exit(None) # Exit without a plan
-        
+
     def _call_generate_plan(self, description: str) -> None:
         """Synchronous wrapper to call generate_plan and then update UI from thread."""
         try:
@@ -225,11 +225,11 @@ class FeatureInputApp(App[str | None]):
         else: # It's an error string
             self.generated_plan_content = plan_data # Store the error message
             plan_display_widget.load_text(plan_data)
-        
+
         if self._loading_timer is not None:
             self._loading_timer.stop()
             self._loading_timer = None
-        
+
         total_elapsed_time_str = ""
         if self._llm_call_start_time is not None: # Use renamed variable
             total_elapsed_time = time.monotonic() - self._llm_call_start_time # Use renamed variable
@@ -277,7 +277,7 @@ class FeatureInputApp(App[str | None]):
                 self._llm_worker = None
                 self.query_one("#loading_subtext", Static).update("Cancellation requested... returning to input.")
                 self.set_timer(0.5, lambda: self._set_ui_state(self.STATE_INPUT_FEATURE)) # Give time for UI update
-            else: 
+            else:
                 self._set_ui_state(self.STATE_INPUT_FEATURE)
         else: # STATE_INPUT_FEATURE
             self.exit(None)
@@ -290,7 +290,7 @@ if __name__ == "__main__":
     # Determine the directory of the current script
     script_dir = os.path.dirname(os.path.abspath(__file__))
     css_file_path = os.path.join(script_dir, "feature_input_app.tcss")
-    
+
     # Ensure your OPENAI_API_KEY (or other LLM provider key) is set in your environment
     # if you want the LLM call to succeed during direct testing.
     # Also, ensure tm4aider.config and tm4aider.llm_planner are importable from this context.
