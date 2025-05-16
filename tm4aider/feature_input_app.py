@@ -4,7 +4,7 @@ from textual.widgets import Header, Footer, Button, Static, TextArea, LoadingInd
 from textual.worker import Worker # Removed WorkerState as it's not directly used
 
 # Import the LLM planner function and config
-from tm4aider.llm_planner import generate_plan
+from .llm_planner import generate_plan
 # config is implicitly used by generate_plan, no direct import needed here unless for other settings
 
 class FeatureInputApp(App[str | None]):
