@@ -77,7 +77,7 @@ class ShellApp(App):
                     self.log.error(f"Error sending command to tmux: {e.stderr.decode() if e.stderr else e}")
             else:
                 self.log.warning("TMUX_TARGET_PANE is not set. Cannot send command.")
-        
+
         elif button_id == "btn_quit_session":
             await self.action_custom_quit()
 
@@ -95,7 +95,7 @@ class ShellApp(App):
             except subprocess.CalledProcessError as e:
                 # Log error, but proceed to quit app anyway
                 self.log.error(f"Error killing tmux session '{self.TMUX_SESSION_NAME}': {e.stderr.decode() if e.stderr else e}")
-        
+
         self.app.exit() # Proceed with normal app quit
 
 if __name__ == "__main__":
@@ -115,7 +115,7 @@ if __name__ == "__main__":
         type=str,
         help="The tmux session name to be managed/killed."
     )
-    
+
     args = parser.parse_args()
 
     # Use a consistent session name, whether passed or defined
@@ -157,8 +157,7 @@ if __name__ == "__main__":
                 subprocess.run(["tmux", "new-session", "-d", "-s", SESSION_NAME, "-n", "main"], check=True)
 
                 # Split pane 0.0 (shell_pane_target) horizontally. New pane (app_pane_target) is to the right, taking 20% width.
-                subprocess.run(["tmux", "split-window", "-h", "-p", "20", "-t", shell_pane_target], check=True)
-                
+                subprocess.run(["tmux", "split-window", "-h", "-t", shell_pane_target], check=True)
                 # Construct the command to run this script (shell_app.py) inside the app_pane_target
                 # This recursive call will have --run-in-tmux-pane and --session-name set.
                 app_command = (
