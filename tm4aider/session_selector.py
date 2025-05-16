@@ -76,9 +76,8 @@ class SessionSelectorApp(App[str | None]):
                 for session in self.active_sessions:
                     # Ensure ListItem children are focusable by default or make Label focusable
                     # Label itself is not focusable by default, ListItem handles focus.
-                    list_item = ListItem(Label(session))
-                    # Store the session name in the ListItem's name attribute for easy retrieval
-                    list_item.name = session 
+                    # Store the session name in the ListItem's name attribute (passed to constructor) for easy retrieval.
+                    list_item = ListItem(Label(session), name=session)
                     list_view.append(list_item)
                 yield list_view
             else:
