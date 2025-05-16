@@ -1,8 +1,36 @@
 import argparse
 import sys
 import os
+import uuid # For generating unique default session names if needed
+
 from tm4aider.sidebar import Sidebar
-from tm4aider.tmux_sidebar import manage_tmux_session # New import
+from tm4aider.tmux_sidebar import manage_tmux_session
+from tm4aider import config # Import config module
+from tm4aider import tmux_utils # Import tmux_utils for session_exists
+from tm4aider.session_selector import SessionSelectorApp # Import the new app
+
+
+DEFAULT_SESSION_BASENAME = "tm4aider-session"
+
+def get_unique_session_name(base_name: str) -> str:
+    """Generates a unique session name if the base_name already exists."""
+    # This function might be more complex if we need to check against all tmux sessions,
+    # but for now, let's assume we just need a new name not in our config.
+    # Or, even simpler, tmux itself will fail to create a session if the name is taken.
+    # For now, let's just return a simple default or a user-provided one.
+    # The session selector will handle new name inputs.
+    # If no sessions exist, we'll propose a default.
+    
+    # Check against existing tmux sessions to suggest a truly unique name
+    # if we are creating a *new* default one.
+    i = 1
+    name_candidate = base_name
+    # We only need this if we are *creating* a default session without user input yet.
+    # If user provides a name via selector, tmux_utils.new_session will handle if it exists.
+    # For now, let's simplify: if no sessions in config, suggest DEFAULT_SESSION_BASENAME.
+    # The manage_tmux_session will handle if it's truly new or not.
+    return base_name
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run TM4Aider")

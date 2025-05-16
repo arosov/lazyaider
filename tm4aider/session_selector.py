@@ -165,21 +165,8 @@ if __name__ == "__main__":
     # Simulate user typing 'new-valid-session' and pressing proceed
     # This part is hard to test directly without running the app interactively
     # For now, this just shows how it would be called.
-    # selected_valid_new = app_valid_new.run() 
+    # selected_valid_new = app_valid_new.run()
     # print(f"Selected session (valid new): {selected_valid_new}")
-
-```
-
-**3. Update `tm4aider.py`**
-
-This is where the main logic for session selection or creation will reside.
-
-```python
-tm4aider.py
-<<<<<<< SEARCH
-import argparse
-import sys
-import os
 from tm4aider.sidebar import Sidebar
 from tm4aider.tmux_sidebar import manage_tmux_session # New import
 
