@@ -9,7 +9,7 @@ from textual.widgets import Button, Footer, Header, Static
 class ShellApp(App):
     """A Textual application to manage a shell session with a command sidebar."""
 
-    TITLE = "Textual Shell"
+    TITLE = "TM4Aider"
     BINDINGS = []  # Removed Ctrl+C binding
     CSS = """
     Screen {
