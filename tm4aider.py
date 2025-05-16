@@ -6,7 +6,7 @@ from tm4aider import tmux_utils
 from tm4aider.app import Sidebar
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run TM4Aider, optionally managing a tmux session.")
+    parser = argparse.ArgumentParser(description="Run TM4Aider")
     parser.add_argument(
         "--run-in-tmux-pane",
         action="store_true",
