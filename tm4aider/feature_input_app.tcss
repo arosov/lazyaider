@@ -83,15 +83,18 @@ TextArea.-error-border {
 .button-container {
     width: 90%;
     max-width: 100%;
-    align: center middle;
+    align: center middle; /* This centers the container block itself */
     padding-top: 1;
     height: auto; /* Allow buttons to define height */
     layout: horizontal;
-    grid-size: 2; /* For two buttons */
-    grid-gutter: 1; /* Spacing between buttons in the grid */
+    /* grid-size: 2; */ /* For two buttons - REMOVED to allow auto-width button centering */
+    /* grid-gutter: 1; */ /* Spacing between buttons in the grid - REMOVED */
+    align-horizontal: center; /* ADDED - To center the group of auto-width buttons */
 }
 
 Button {
-    width: 100%; /* Buttons will take up available grid space */
-    /* margin: 0 1%; */ /* No longer needed with grid layout */
+    /* width: 100%; */ /* REMOVED - Was for making buttons fill grid cells */
+    width: auto; /* ADDED - Buttons now wrap their content */
+    margin: 0 1; /* ADDED - Provides spacing around each button (e.g., 2 units between adjacent buttons) */
+    /* margin: 0 1%; */ /* Comment remains, still not needed */
 }
