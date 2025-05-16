@@ -145,7 +145,7 @@ class SessionSelectorApp(App[str | None]):
 
     TITLE = "TM4Aider Session Management"
     BINDINGS = [
-        Binding("enter", "select_session", "Use Selected", show=False), # Removed priority=True
+        Binding("enter", "try_select_session_with_enter", "Use Selected", show=False),
     ]
     CSS = """
     Screen {
@@ -424,8 +424,20 @@ class SessionSelectorApp(App[str | None]):
         elif button_id == "btn_cancel":
             self.exit(None) # Exit the app, returning None
 
+    async def action_try_select_session_with_enter(self) -> None:
+        """
+        Attempts to submit the current selection via Enter key,
+        but only if no modal screen is active.
+        """
+        # self.screen_stack[0] is the SessionSelectorApp's main screen.
+        # If len > 1, another screen (e.g., modal, command palette) is on top.
+        if len(self.screen_stack) == 1:
+            await self.action_select_session()
+        # If a modal or other screen is active, do nothing, allowing that screen
+        # to handle the Enter key.
+
     async def action_select_session(self) -> None:
-        """Action bound to the Enter key. Uses the currently selected session."""
+        """Action to use the currently selected session. Can be called by button or Enter binding."""
         # Only act if a session is selected AND the ListView has focus.
         # This prevents Enter from triggering session selection when focus is on
         # other elements like the command input in the Footer or command palette.
