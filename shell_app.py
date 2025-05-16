@@ -19,7 +19,7 @@ class ShellApp(App):
         height: 1fr; /* Make Horizontal fill available vertical space between Header and Footer */
     }
     #sidebar {
-        width: 20%; /* Sidebar takes 20% of the width */
+        width: 100%; /* Sidebar takes 20% of the width */
         height: 100%; /* Fill height of parent Horizontal */
         padding: 1;
         border-left: thick $primary-background-darken-2;
