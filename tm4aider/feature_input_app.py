@@ -197,11 +197,16 @@ class FeatureInputApp(App[str | None]):
             self._llm_call_start_time = None # Reset for next run
 
         if isinstance(plan_data, tuple):
-            # Append time taken to the existing display_text
+            # Append time taken to the existing display_text for successful plan
             current_text = plan_display_widget.text
             plan_display_widget.load_text(current_text + total_elapsed_time_str)
-        # If it was an error string, it's already loaded. We could append time too if desired.
-        # For now, only appending to successful plan display.
+        else:
+            # For error messages, also append the time taken if available
+            current_text = plan_display_widget.text # This is the error message text
+            if total_elapsed_time_str: # Only append if time was actually calculated
+                plan_display_widget.load_text(current_text + total_elapsed_time_str)
+            # If total_elapsed_time_str is empty (e.g. _llm_call_start_time was None),
+            # just the error message (already loaded) will be shown.
 
         self._set_ui_state(self.STATE_DISPLAY_PLAN)
         # Reset loading subtext for next time
