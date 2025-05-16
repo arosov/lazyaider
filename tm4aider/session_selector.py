@@ -398,11 +398,19 @@ class SessionSelectorApp(App[str | None]):
 
     async def action_select_session(self) -> None:
         """Action bound to the Enter key. Uses the currently selected session."""
-        if self.selected_session_name:
-            self.exit(self.selected_session_name)
-        # If no session is selected, Enter effectively does nothing in this context,
-        # or rather, it won't trigger an exit. Default Textual behavior for Enter might occur
-        # depending on focus (e.g., activating a focused button).
+        # Only act if a session is selected AND the ListView has focus.
+        # This prevents Enter from triggering session selection when focus is on
+        # other elements like the command input in the Footer or command palette.
+        try:
+            list_view = self.query_one(ListView)
+            if list_view.has_focus and self.selected_session_name:
+                self.exit(self.selected_session_name)
+        except NoMatches:
+            # If ListView doesn't exist (e.g., no sessions), this action shouldn't fire.
+            pass
+        # If conditions are not met (e.g., ListView not focused, or no session selected),
+        # Enter should be handled by the focused widget or do nothing if no other
+        # binding/handler for Enter exists for that widget.
 
 if __name__ == "__main__":
     # Example usage:
