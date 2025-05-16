@@ -10,9 +10,7 @@ class ShellApp(App):
     """A Textual application to manage a shell session with a command sidebar."""
 
     TITLE = "Textual Shell"
-    BINDINGS = [
-        ("ctrl+c", "custom_quit", "Quit App & Tmux Session")
-    ]
+    BINDINGS = []  # Removed Ctrl+C binding
     CSS = """
     Screen {
         layout: vertical;
@@ -21,7 +19,7 @@ class ShellApp(App):
         height: 1fr; /* Make Horizontal fill available vertical space between Header and Footer */
     }
     #sidebar {
-        width: 1fr; /* Sidebar takes 1/4 of the width */
+        width: 20%; /* Sidebar takes 20% of the width */
         height: 100%; /* Fill height of parent Horizontal */
         padding: 1;
         border-left: thick $primary-background-darken-2;
@@ -39,16 +37,6 @@ class ShellApp(App):
     }
     """
 
-    # Predefined commands: key is for ID and label generation, value is the command string
-    COMMANDS = {
-        "ls": "ls -la",
-        "pwd": "pwd",
-        "date": "date",
-        "git_status": "git status",
-        "free_space": "df -h",
-        "show_python_version": "python --version",
-    }
-
     # These will be set dynamically when the app is launched by the main script logic
     TMUX_TARGET_PANE: str | None = None
     TMUX_SESSION_NAME: str | None = None
@@ -59,41 +47,39 @@ class ShellApp(App):
         with Horizontal(id="main_layout"):
             # Terminal widget removed
             with VerticalScroll(id="sidebar"):
-                yield Static("Quick Commands", classes="sidebar-title")
-                for cmd_id in self.COMMANDS:
-                    # Generate a user-friendly label from the command ID
-                    label = cmd_id.replace("_", " ").capitalize()
-                    yield Button(label, id=f"btn_{cmd_id}", variant="primary")
+                yield Static("Controls", classes="sidebar-title")
+                yield Button("Start Aider", id="btn_start_aider", variant="success")
+                yield Button("Quit Session", id="btn_quit_session", variant="error")
         yield Footer()
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button press events from the sidebar."""
-        # Terminal widget and its interactions have been removed.
-        # Ensure the pressed button has an ID and it starts with "btn_"
-        if event.button.id and event.button.id.startswith("btn_"):
-            cmd_key = event.button.id[4:]  # Extract command key from button ID (e.g., "ls" from "btn_ls")
-            command_to_run = self.COMMANDS.get(cmd_key)
-            
-            if command_to_run:
-                if self.TMUX_TARGET_PANE:
-                    try:
-                        # Send the command string
-                        subprocess.run(
-                            ["tmux", "send-keys", "-t", self.TMUX_TARGET_PANE, command_to_run],
-                            check=True, capture_output=True
-                        )
-                        # Send the "Enter" key to execute the command
-                        subprocess.run(
-                            ["tmux", "send-keys", "-t", self.TMUX_TARGET_PANE, "Enter"],
-                            check=True, capture_output=True
-                        )
-                        self.log(f"Sent command to tmux pane {self.TMUX_TARGET_PANE}: {command_to_run}")
-                    except FileNotFoundError:
-                        self.log.error("Error: tmux command not found. Is tmux installed and in PATH?")
-                    except subprocess.CalledProcessError as e:
-                        self.log.error(f"Error sending command to tmux: {e.stderr.decode() if e.stderr else e}")
-                else:
-                    self.log.warning("TMUX_TARGET_PANE is not set. Cannot send command.")
+        button_id = event.button.id
+
+        if button_id == "btn_start_aider":
+            command_to_run = "aider"
+            if self.TMUX_TARGET_PANE:
+                try:
+                    # Send the command string "aider"
+                    subprocess.run(
+                        ["tmux", "send-keys", "-t", self.TMUX_TARGET_PANE, command_to_run],
+                        check=True, capture_output=True
+                    )
+                    # Send the "Enter" key to execute the command
+                    subprocess.run(
+                        ["tmux", "send-keys", "-t", self.TMUX_TARGET_PANE, "Enter"],
+                        check=True, capture_output=True
+                    )
+                    self.log(f"Sent command to tmux pane {self.TMUX_TARGET_PANE}: {command_to_run}")
+                except FileNotFoundError:
+                    self.log.error("Error: tmux command not found. Is tmux installed and in PATH?")
+                except subprocess.CalledProcessError as e:
+                    self.log.error(f"Error sending command to tmux: {e.stderr.decode() if e.stderr else e}")
+            else:
+                self.log.warning("TMUX_TARGET_PANE is not set. Cannot send command.")
+        
+        elif button_id == "btn_quit_session":
+            await self.action_custom_quit()
 
     async def action_custom_quit(self) -> None:
         """Custom quit action that also attempts to kill the tmux session."""
