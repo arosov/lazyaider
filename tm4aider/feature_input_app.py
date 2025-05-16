@@ -27,11 +27,7 @@ class FeatureInputApp(App[str | None]):
 
     def __init__(self):
         super().__init__()
-
-        # Set theme based on config
-        theme_name = config.settings.get("theme_name", config.DEFAULT_THEME_NAME)
-        self.dark = theme_name == "dark" # Control theme via self.dark for built-in light/dark
-
+        # Theme will be set in on_mount
         self.current_ui_state = self.STATE_INPUT_FEATURE
         self.generated_plan_content: str | None = None
         self._llm_worker: Worker | None = None
@@ -94,7 +90,29 @@ class FeatureInputApp(App[str | None]):
 
 
     async def on_mount(self) -> None:
-        """Focus the input widget on mount."""
+        """Apply theme and focus the input widget on mount."""
+        # Apply theme from config when app is mounted
+        theme_name_from_config = config.settings.get("theme_name", config.DEFAULT_THEME_NAME)
+        if theme_name_from_config == "dark":
+            self.dark = True
+        elif theme_name_from_config == "light":
+            self.dark = False
+        else:
+            # For custom themes, they must be registered by the app.
+            # If 'theme_name_from_config' is not a registered theme,
+            # Textual will raise an InvalidThemeError.
+            # This app currently doesn't register custom themes, so only "light" or "dark"
+            # from config will work without error unless Textual has other built-ins.
+            try:
+                self.theme = theme_name_from_config
+            except Exception as e: # Catch potential InvalidThemeError
+                # Fallback to default if custom theme fails (e.g., not registered)
+                # and print a warning.
+                import sys
+                print(f"Warning: Failed to set theme '{theme_name_from_config}': {e}. Falling back to default.", file=sys.stderr)
+                self.dark = config.DEFAULT_THEME_NAME == "dark"
+
+
         self._set_ui_state(self.STATE_INPUT_FEATURE)
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
