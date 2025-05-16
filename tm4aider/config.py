@@ -1,4 +1,5 @@
 import os
+import sys
 import yaml
 
 CONFIG_FILENAME = ".tm4aider.conf.yml"
