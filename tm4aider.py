@@ -1,8 +1,8 @@
-import subprocess
 import argparse
 import sys
 import os
 from textual.app import App, ComposeResult
+from tm4aider import tmux_utils
 from textual.containers import Horizontal, VerticalScroll
 from textual.widgets import Button, Footer, Header, Static
 
@@ -62,19 +62,13 @@ class TM4Aider(App):
             if self.TMUX_TARGET_PANE:
                 try:
                     # Send the command string "aider"
-                    subprocess.run(
-                        ["tmux", "send-keys", "-t", self.TMUX_TARGET_PANE, command_to_run],
-                        check=True, capture_output=True
-                    )
+                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, command_to_run, capture_output=True)
                     # Send the "Enter" key to execute the command
-                    subprocess.run(
-                        ["tmux", "send-keys", "-t", self.TMUX_TARGET_PANE, "Enter"],
-                        check=True, capture_output=True
-                    )
+                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter", capture_output=True)
                     self.log(f"Sent command to tmux pane {self.TMUX_TARGET_PANE}: {command_to_run}")
                 except FileNotFoundError:
                     self.log.error("Error: tmux command not found. Is tmux installed and in PATH?")
-                except subprocess.CalledProcessError as e:
+                except subprocess.CalledProcessError as e: # subprocess is still needed for this exception type
                     self.log.error(f"Error sending command to tmux: {e.stderr.decode() if e.stderr else e}")
             else:
                 self.log.warning("TMUX_TARGET_PANE is not set. Cannot send command.")
@@ -84,10 +78,7 @@ class TM4Aider(App):
                 try:
                     # Detach the client currently attached to this session
                     # If run from within tmux, this will detach the current client.
-                    subprocess.run(
-                        ["tmux", "detach-client", "-s", self.TMUX_SESSION_NAME],
-                        check=True, capture_output=True
-                    )
+                    tmux_utils.detach_client(self.TMUX_SESSION_NAME)
                     self.log(f"Detached from tmux session: {self.TMUX_SESSION_NAME}")
                     # The app itself should also quit after detaching,
                     # as it's no longer visible or interactive.
@@ -107,14 +98,11 @@ class TM4Aider(App):
         """Custom quit action that also attempts to kill the tmux session."""
         if kill_session and self.TMUX_SESSION_NAME:
             try:
-                subprocess.run(
-                    ["tmux", "kill-session", "-t", self.TMUX_SESSION_NAME],
-                    check=True, capture_output=True
-                )
+                tmux_utils.kill_session(self.TMUX_SESSION_NAME)
                 self.log(f"Sent kill-session for tmux session: {self.TMUX_SESSION_NAME}")
             except FileNotFoundError:
                 self.log.error("Error: tmux command not found when trying to kill session.")
-            except subprocess.CalledProcessError as e:
+            except subprocess.CalledProcessError as e: # subprocess is still needed for this exception type
                 # Log error, but proceed to quit app anyway
                 self.log.error(f"Error killing tmux session '{self.TMUX_SESSION_NAME}': {e.stderr.decode() if e.stderr else e}")
 
@@ -167,12 +155,7 @@ if __name__ == "__main__":
 
         try:
             # Check if the tmux session already exists
-            session_exists_check = subprocess.run(
-                ["tmux", "has-session", "-t", SESSION_NAME],
-                capture_output=True, text=True
-            )
-
-            if session_exists_check.returncode != 0:
+            if not tmux_utils.session_exists(SESSION_NAME):
                 # Session does not exist, create and configure it
                 print(f"Creating and configuring new tmux session: {SESSION_NAME}")
                 # Get current terminal size
@@ -187,14 +170,11 @@ if __name__ == "__main__":
                     term_height = None
                     print("Warning: Could not determine terminal size. Tmux will use default sizing.", file=sys.stderr)
 
-                # Create a new detached session. The first window (0) and pane (0) gets default shell.
-                new_session_cmd = ["tmux", "new-session", "-d", "-s", SESSION_NAME, "-n", "main"]
-                if term_width is not None and term_height is not None:
-                    new_session_cmd.extend(["-x", str(term_width), "-y", str(term_height)])
-                subprocess.run(new_session_cmd, check=True)
+                # Create a new detached session.
+                tmux_utils.new_session(SESSION_NAME, window_name="main", term_width=term_width, term_height=term_height)
 
-                # Split pane 0.0 (shell_pane_target) horizontally. New pane (app_pane_target) is to the right, taking 10% width.
-                subprocess.run(["tmux", "split-window", "-h", "-l", "15%", "-t", shell_pane_target], check=True)
+                # Split pane 0.0 (shell_pane_target) horizontally. New pane (app_pane_target) is to the right.
+                tmux_utils.split_window(shell_pane_target, horizontal=True, size_specifier="15%")
                 # Construct the command to run this script (shell_app.py) inside the app_pane_target
                 # This recursive call will have --run-in-tmux-pane and --session-name set.
                 app_command = (
@@ -203,28 +183,26 @@ if __name__ == "__main__":
                     f"--target-pane {shell_pane_target} "
                     f"--session-name {SESSION_NAME}"
                 )
-                subprocess.run(["tmux", "send-keys", "-t", app_pane_target, app_command, "Enter"], check=True)
+                tmux_utils.send_keys_to_pane(app_pane_target, app_command, capture_output=False)
+                tmux_utils.send_keys_to_pane(app_pane_target, "Enter", capture_output=False)
             else:
                 print(f"Attaching to existing tmux session: {SESSION_NAME}")
 
-            # Ensure mouse mode is enabled for the session (includes draggable pane borders and focus follows mouse)
-            # This is set globally and applies to both new and existing sessions when this script runs.
-            subprocess.run(["tmux", "set-option", "-g", "mouse", "on"], check=True)
+            # Ensure mouse mode is enabled for the session
+            tmux_utils.set_global_option("mouse", "on")
 
-            # Set pane border lines to heavy to make them appear thicker and easier to grab.
-            subprocess.run(["tmux", "set-option", "-g", "pane-border-lines", "heavy"], check=True)
+            # Set pane border lines to heavy
+            tmux_utils.set_global_option("pane-border-lines", "heavy")
 
             # Select the shell pane to ensure it has focus on attach
-            subprocess.run(["tmux", "select-pane", "-t", shell_pane_target], check=True)
+            tmux_utils.select_pane(shell_pane_target)
 
-            # Attach to the session (either newly created or existing)
-            # os.execvp replaces the current python process with tmux,
-            # so when tmux exits, the script is done.
-            os.execvp("tmux", ["tmux", "attach-session", "-t", SESSION_NAME])
+            # Attach to the session
+            tmux_utils.attach_session(SESSION_NAME)
 
-        except FileNotFoundError:
+        except FileNotFoundError: # Catches if tmux command itself or os.execvp("tmux") fails
             print("Error: tmux command not found. Please ensure tmux is installed and in your PATH.", file=sys.stderr)
             sys.exit(1)
-        except subprocess.CalledProcessError as e:
+        except subprocess.CalledProcessError as e: # subprocess is still needed for this exception type
             print(f"Error during tmux setup: {e.stderr.decode() if e.stderr else e}", file=sys.stderr)
             sys.exit(1)
