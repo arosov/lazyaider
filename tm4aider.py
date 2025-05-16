@@ -106,8 +106,6 @@ class TM4Aider(App):
     async def action_custom_quit(self, kill_session: bool = True) -> None:
         """Custom quit action that also attempts to kill the tmux session."""
         if kill_session and self.TMUX_SESSION_NAME:
-        """Custom quit action that also attempts to kill the tmux session."""
-        if self.TMUX_SESSION_NAME:
             try:
                 subprocess.run(
                     ["tmux", "kill-session", "-t", self.TMUX_SESSION_NAME],
