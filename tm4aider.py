@@ -3,7 +3,7 @@ import argparse
 import sys
 import os
 from tm4aider import tmux_utils
-from tm4aider.app import Sidebar
+from tm4aider.sidebar import Sidebar
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run TM4Aider")
