@@ -154,6 +154,15 @@ if __name__ == "__main__":
         shell_pane_target = f"{SESSION_NAME}:0.0"  # Shell will be in pane 0 of window 0
         app_pane_target = f"{SESSION_NAME}:0.1"    # App will be in pane 1 of window 0 (to the right)
 
+        # Construct the command to run this script (shell_app.py) inside the app_pane_target
+        # This recursive call will have --run-in-tmux-pane and --session-name set.
+        app_command = (
+            f"{sys.executable} {os.path.abspath(sys.argv[0])} "
+            f"--run-in-tmux-pane "
+            f"--target-pane {shell_pane_target} "
+            f"--session-name {SESSION_NAME}"
+        )
+
         try:
             # Check if the tmux session already exists
             if not tmux_utils.session_exists(SESSION_NAME):
@@ -176,18 +185,16 @@ if __name__ == "__main__":
 
                 # Split pane 0.0 (shell_pane_target) horizontally. New pane (app_pane_target) is to the right.
                 tmux_utils.split_window(shell_pane_target, horizontal=True, size_specifier="15%")
-                # Construct the command to run this script (shell_app.py) inside the app_pane_target
-                # This recursive call will have --run-in-tmux-pane and --session-name set.
-                app_command = (
-                    f"{sys.executable} {os.path.abspath(sys.argv[0])} "
-                    f"--run-in-tmux-pane "
-                    f"--target-pane {shell_pane_target} "
-                    f"--session-name {SESSION_NAME}"
-                )
+                # app_command is now defined before the try block.
+                # The following send_keys will use it to start the app in the new pane.
                 tmux_utils.send_keys_to_pane(app_pane_target, app_command, capture_output=False)
                 tmux_utils.send_keys_to_pane(app_pane_target, "Enter", capture_output=False)
             else:
-                print(f"Attaching to existing tmux session: {SESSION_NAME}")
+                # Session exists
+                print(f"Session {SESSION_NAME} exists. Restarting TM4Aider in the right pane.")
+                # Send app_command to app_pane_target to restart/ensure it's running
+                tmux_utils.send_keys_to_pane(app_pane_target, app_command, capture_output=False)
+                tmux_utils.send_keys_to_pane(app_pane_target, "Enter", capture_output=False)
 
             # Ensure mouse mode is enabled for the session
             tmux_utils.set_global_option("mouse", "on")
