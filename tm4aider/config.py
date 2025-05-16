@@ -54,6 +54,11 @@ def load_config() -> dict:
         if "theme_name" in config: # Value exists but is not a str
             print(f"Warning: 'theme_name' in {config_path or 'config'} is not a string. Using default value.", file=sys.stderr)
         config["theme_name"] = DEFAULT_THEME_NAME
+    
+    if not isinstance(config.get("llm_model"), str) or not config.get("llm_model", "").strip():
+        if "llm_model" in config and config.get("llm_model") is not None : # Value exists but is not a non-empty str
+            print(f"Warning: 'llm_model' in {config_path or 'config'} is not a valid non-empty string. Using default value.", file=sys.stderr)
+        config["llm_model"] = DEFAULT_LLM_MODEL
     return config
 
 def save_config(current_config: dict) -> None:
@@ -94,4 +99,11 @@ def update_theme_in_config(theme_name: str) -> None:
     current_theme = settings.get("theme_name")
     if current_theme != theme_name:
         settings["theme_name"] = theme_name
+        save_config(settings)
+
+def update_llm_model_in_config(model_name: str) -> None:
+    """Updates the LLM model name in config and saves."""
+    current_model = settings.get("llm_model")
+    if current_model != model_name:
+        settings["llm_model"] = model_name
         save_config(settings)
