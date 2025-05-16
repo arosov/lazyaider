@@ -45,7 +45,7 @@ class RenameSessionScreen(ModalScreen[str | None]):
     
     .button_row { /* Style for button row within this modal */
         width: 100%;
-        text-align: center; 
+        align-horizontal: center; /* Center buttons horizontally */
         margin-top: 1;
     }
 
@@ -147,7 +147,7 @@ class SessionSelectorApp(App[str | None]):
     }
     .button_row {
         width: 100%;
-        text-align: center; /* Center buttons */
+        align-horizontal: center; /* Center buttons horizontally */
         margin-top: 1;
     }
     Button {
