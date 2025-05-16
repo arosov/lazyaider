@@ -6,8 +6,8 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal, VerticalScroll
 from textual.widgets import Button, Footer, Header, Static
 
-class ShellApp(App):
-    """A Textual application to manage a shell session with a command sidebar."""
+class TM4Aider(App):
+    """Task Manager for Aider coding assistant"""
 
     TITLE = "TM4Aider"
     BINDINGS = []  # Removed Ctrl+C binding
@@ -99,7 +99,7 @@ class ShellApp(App):
         self.app.exit() # Proceed with normal app quit
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run ShellApp, optionally managing a tmux session.")
+    parser = argparse.ArgumentParser(description="Run TM4Aider, optionally managing a tmux session.")
     parser.add_argument(
         "--run-in-tmux-pane",
         action="store_true",
@@ -120,7 +120,7 @@ if __name__ == "__main__":
 
     # Use a consistent session name, whether passed or defined
     # If --session-name is provided (when run inside tmux), use that. Otherwise, use default.
-    SESSION_NAME = args.session_name if args.session_name else "textual_shell_app"
+    SESSION_NAME = args.session_name if args.session_name else "tm4aider-session"
 
 
     if args.run_in_tmux_pane:
@@ -132,9 +132,9 @@ if __name__ == "__main__":
             print("Error: --session-name is required when --run-in-tmux-pane is set.", file=sys.stderr)
             sys.exit(1)
 
-        ShellApp.TMUX_TARGET_PANE = args.target_pane
-        ShellApp.TMUX_SESSION_NAME = args.session_name # Pass session name to app
-        app = ShellApp()
+        TM4Aider.TMUX_TARGET_PANE = args.target_pane
+        TM4Aider.TMUX_SESSION_NAME = args.session_name # Pass session name to app
+        app = TM4Aider()
         app.run()
     else:
         # This branch is executed when the user runs `python shell_app.py`
