@@ -30,7 +30,7 @@ class FeatureInputApp(App[str | None]):
         self.current_ui_state = self.STATE_INPUT_FEATURE
         self.generated_plan_content: str | None = None
         self._llm_worker: Worker | None = None
-        self._start_time: float | None = None
+        self._llm_call_start_time: float | None = None # Renamed to avoid conflict
         self._loading_timer: Timer | None = None
 
 
@@ -130,7 +130,7 @@ class FeatureInputApp(App[str | None]):
             # Initial message, timer will update it with elapsed time
             loading_text_widget.update(f"Generating plan with {current_model_name}, please wait...")
             
-            self._start_time = time.monotonic()
+            self._llm_call_start_time = time.monotonic() # Use renamed variable
             if self._loading_timer is not None:
                 self._loading_timer.stop() # Should not be running, but good practice
             self._loading_timer = self.set_interval(0.1, self._update_loading_time) # Update frequently for smoothness
@@ -191,10 +191,10 @@ class FeatureInputApp(App[str | None]):
             self._loading_timer = None
         
         total_elapsed_time_str = ""
-        if self._start_time is not None:
-            total_elapsed_time = time.monotonic() - self._start_time
+        if self._llm_call_start_time is not None: # Use renamed variable
+            total_elapsed_time = time.monotonic() - self._llm_call_start_time # Use renamed variable
             total_elapsed_time_str = f"\nTime taken: {total_elapsed_time:.2f} seconds"
-            self._start_time = None # Reset for next run
+            self._llm_call_start_time = None # Reset for next run
 
         if isinstance(plan_data, tuple):
             # Append time taken to the existing display_text
@@ -209,8 +209,8 @@ class FeatureInputApp(App[str | None]):
 
     def _update_loading_time(self) -> None:
         """Periodically updates the loading subtext with elapsed time."""
-        if self._start_time is not None and self.current_ui_state == self.STATE_LOADING_PLAN:
-            elapsed_time = time.monotonic() - self._start_time # Corrected self_start_time to self._start_time
+        if self._llm_call_start_time is not None and self.current_ui_state == self.STATE_LOADING_PLAN: # Use renamed variable
+            elapsed_time = time.monotonic() - self._llm_call_start_time # Use renamed variable
             current_model_name = config.settings.get("llm_model", "Unknown Model")
             loading_text_widget = self.query_one("#loading_subtext", Static)
             loading_text_widget.update(f"Generating plan with {current_model_name}, please wait... (Elapsed: {elapsed_time:.1f}s)")
@@ -225,7 +225,7 @@ class FeatureInputApp(App[str | None]):
             if self._loading_timer is not None:
                 self._loading_timer.stop()
                 self._loading_timer = None
-            self._start_time = None
+            self._llm_call_start_time = None # Use renamed variable
 
             if self._llm_worker is not None:
                 await self._llm_worker.cancel() # Attempt to cancel the worker
