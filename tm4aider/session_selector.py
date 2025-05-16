@@ -71,15 +71,14 @@ class SessionSelectorApp(App[str | None]):
 
             if self.active_sessions:
                 yield Label("Active Sessions:")
-                # Use ListView instead of VerticalScroll for list items
-                list_view = ListView(id="session_list_view")
-                for session in self.active_sessions:
-                    # Ensure ListItem children are focusable by default or make Label focusable
-                    # Label itself is not focusable by default, ListItem handles focus.
-                    # Store the session name in the ListItem's name attribute (passed to constructor) for easy retrieval.
-                    list_item = ListItem(Label(session), name=session)
-                    list_view.append(list_item)
-                yield list_view
+                # Use ListView as a context manager and yield ListItems as its children
+                with ListView(id="session_list_view") as list_view:
+                    for session in self.active_sessions:
+                        # Ensure ListItem children are focusable by default or make Label focusable
+                        # Label itself is not focusable by default, ListItem handles focus.
+                        # Store the session name in the ListItem's name attribute (passed to constructor) for easy retrieval.
+                        list_item = ListItem(Label(session), name=session)
+                        yield list_item # Yield ListItem as a child of the ListView
             else:
                 yield Static("No active managed sessions found.")
 
