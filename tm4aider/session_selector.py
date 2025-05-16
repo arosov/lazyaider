@@ -145,7 +145,7 @@ class SessionSelectorApp(App[str | None]):
 
     TITLE = "TM4Aider Session Management"
     BINDINGS = [
-        Binding("enter", "try_select_session_with_enter", "Use Selected", show=False),
+        Binding("enter", "try_select_session_with_enter", "Use Selected", show=False, priority=True),
     ]
     CSS = """
     Screen {
