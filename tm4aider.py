@@ -49,6 +49,7 @@ class TM4Aider(App):
             with VerticalScroll(id="sidebar"):
                 yield Static("Controls", classes="sidebar-title")
                 yield Button("Start Aider", id="btn_start_aider", variant="success")
+                yield Button("Detach Session", id="btn_detach_session", variant="primary")
                 yield Button("Quit Session", id="btn_quit_session", variant="error")
         yield Footer()
 
@@ -78,10 +79,33 @@ class TM4Aider(App):
             else:
                 self.log.warning("TMUX_TARGET_PANE is not set. Cannot send command.")
 
+        elif button_id == "btn_detach_session":
+            if self.TMUX_SESSION_NAME: # We need a session to detach from
+                try:
+                    # Detach the client currently attached to this session
+                    # If run from within tmux, this will detach the current client.
+                    subprocess.run(
+                        ["tmux", "detach-client", "-s", self.TMUX_SESSION_NAME],
+                        check=True, capture_output=True
+                    )
+                    self.log(f"Detached from tmux session: {self.TMUX_SESSION_NAME}")
+                    # The app itself should also quit after detaching,
+                    # as it's no longer visible or interactive.
+                    await self.action_custom_quit(kill_session=False)
+                except FileNotFoundError:
+                    self.log.error("Error: tmux command not found when trying to detach.")
+                except subprocess.CalledProcessError as e:
+                    self.log.error(f"Error detaching from tmux session '{self.TMUX_SESSION_NAME}': {e.stderr.decode() if e.stderr else e}")
+            else:
+                self.log.warning("TMUX_SESSION_NAME is not set. Cannot detach session.")
+
+
         elif button_id == "btn_quit_session":
             await self.action_custom_quit()
 
-    async def action_custom_quit(self) -> None:
+    async def action_custom_quit(self, kill_session: bool = True) -> None:
+        """Custom quit action that also attempts to kill the tmux session."""
+        if kill_session and self.TMUX_SESSION_NAME:
         """Custom quit action that also attempts to kill the tmux session."""
         if self.TMUX_SESSION_NAME:
             try:
