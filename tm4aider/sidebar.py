@@ -42,9 +42,13 @@ class Sidebar(App):
 
     def __init__(self):
         super().__init__()
-        # Apply theme from config
+        # Theme will be set in on_mount
+
+    async def on_mount(self) -> None:
+        """Apply theme from config when app is mounted."""
         from tm4aider import config as app_config_module
         self.theme = app_config_module.settings.get("theme_name", app_config_module.DEFAULT_THEME_NAME)
+        # App.on_mount() is an empty async method, so no explicit super call is strictly needed here.
 
     def watch_theme(self, old_theme: str | None, new_theme: str | None) -> None:
         """Saves the theme when it changes."""

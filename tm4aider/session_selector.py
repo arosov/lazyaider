@@ -166,9 +166,7 @@ class SessionSelectorApp(App[str | None]):
         # This is for the caller to know what renames happened if a session is picked after renaming.
         self.renamed_map: dict[str, str] = {}
 
-        # Apply theme from config
-        from tm4aider import config as app_config_module
-        self.theme = app_config_module.settings.get("theme_name", app_config_module.DEFAULT_THEME_NAME)
+        # self.theme will be set in on_mount
 
     def watch_theme(self, old_theme: str | None, new_theme: str | None) -> None:
         """Saves the theme when it changes."""
@@ -213,8 +211,12 @@ class SessionSelectorApp(App[str | None]):
                 yield Button("Cancel", id="btn_cancel", variant="error")
             yield Footer()
 
-    def on_mount(self) -> None:
+    async def on_mount(self) -> None: # Make async
         """Called when app is mounted."""
+        # Apply theme from config when app is mounted
+        from tm4aider import config as app_config_module
+        self.theme = app_config_module.settings.get("theme_name", app_config_module.DEFAULT_THEME_NAME)
+
         list_view = None
         try:
             # ListView is only composed if self.active_sessions is truthy.
