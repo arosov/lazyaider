@@ -156,9 +156,6 @@ if __name__ == "__main__":
                 # Create a new detached session. The first window (0) and pane (0) gets default shell.
                 subprocess.run(["tmux", "new-session", "-d", "-s", SESSION_NAME, "-n", "main"], check=True)
 
-                # Enable mouse mode for the session (includes focus follows mouse for panes)
-                subprocess.run(["tmux", "set-option", "-g", "mouse", "on"], check=True)
-                
                 # Split pane 0.0 (shell_pane_target) horizontally. New pane (app_pane_target) is to the right, taking 20% width.
                 subprocess.run(["tmux", "split-window", "-h", "-p", "20", "-t", shell_pane_target], check=True)
                 
@@ -173,6 +170,13 @@ if __name__ == "__main__":
                 subprocess.run(["tmux", "send-keys", "-t", app_pane_target, app_command, "Enter"], check=True)
             else:
                 print(f"Attaching to existing tmux session: {SESSION_NAME}")
+
+            # Ensure mouse mode is enabled for the session (includes draggable pane borders and focus follows mouse)
+            # This is set globally and applies to both new and existing sessions when this script runs.
+            subprocess.run(["tmux", "set-option", "-g", "mouse", "on"], check=True)
+
+            # Set pane border lines to heavy to make them appear thicker and easier to grab.
+            subprocess.run(["tmux", "set-option", "-g", "pane-border-lines", "heavy"], check=True)
 
             # Select the shell pane to ensure it has focus on attach
             subprocess.run(["tmux", "select-pane", "-t", shell_pane_target], check=True)
