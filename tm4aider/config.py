@@ -6,6 +6,7 @@ CONFIG_FILENAME = ".tm4aider.conf.yml"
 DEFAULT_SIDEPANE_PERCENT_WIDTH = 20
 DEFAULT_THEME_NAME = "light" # Textual's default theme
 DEFAULT_LLM_MODEL = "gpt-3.5-turbo" # Default LLM model
+DEFAULT_LLM_API_KEY = None # Default LLM API key
 
 def find_config_file() -> str | None:
     """
@@ -60,6 +61,13 @@ def load_config() -> dict:
         if "llm_model" in config and config.get("llm_model") is not None : # Value exists but is not a non-empty str
             print(f"Warning: 'llm_model' in {config_path or 'config'} is not a valid non-empty string. Using default value.", file=sys.stderr)
         config["llm_model"] = DEFAULT_LLM_MODEL
+
+    # Ensure llm_api_key is a string or None
+    if "llm_api_key" in config and not (isinstance(config.get("llm_api_key"), str) or config.get("llm_api_key") is None):
+        print(f"Warning: 'llm_api_key' in {config_path or 'config'} is not a string or null. Using default value.", file=sys.stderr)
+        config["llm_api_key"] = DEFAULT_LLM_API_KEY
+    elif "llm_api_key" not in config:
+        config["llm_api_key"] = DEFAULT_LLM_API_KEY
     return config
 
 def save_config(current_config: dict) -> None:
@@ -107,4 +115,11 @@ def update_llm_model_in_config(model_name: str) -> None:
     current_model = settings.get("llm_model")
     if current_model != model_name:
         settings["llm_model"] = model_name
+        save_config(settings)
+
+def update_llm_api_key_in_config(api_key: str | None) -> None:
+    """Updates the LLM API key in config and saves."""
+    current_api_key = settings.get("llm_api_key")
+    if current_api_key != api_key:
+        settings["llm_api_key"] = api_key
         save_config(settings)

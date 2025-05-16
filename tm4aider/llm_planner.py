@@ -92,6 +92,7 @@ def generate_plan(feature_description: str) -> str:
         response = litellm.completion(
             model=model,
             messages=messages,
+            api_key=api_key_to_use, # Pass the API key to litellm
             timeout=120 # seconds
         )
         # Accessing content according to litellm's current typical response structure
