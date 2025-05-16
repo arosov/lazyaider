@@ -95,8 +95,26 @@ class FeatureInputApp(App[str | None]):
                 description_area.styles.border = ("heavy", "red")
                 return
             
-            description_area.border_title = None # Reset border
-            description_area.styles.border = ("round", "$primary") # Reset to default
+            description_area.border_title = None # Reset border title
+            # Reset border styles by removing the ones applied for the error state.
+            # This allows the default CSS to take over again.
+            description_area.styles.border_type = None 
+            description_area.styles.border_title_color = None
+            # If you want to be absolutely sure it reverts to the CSS,
+            # you might need to re-apply the original CSS border if it was more complex
+            # than just "round $primary". For now, clearing specific overrides is often enough.
+            # Or, if the default border is simple, like "round $primary",
+            # and you know the resolved color of $primary, you could use that.
+            # For now, let's try removing the overrides.
+            # If the CSS for TextArea defines a border, it should reappear.
+            # If not, we might need to explicitly set it to a known default.
+            # A common default might be:
+            # description_area.styles.border = ("round", "blue") # or some other known color
+            # For now, let's rely on CSS to re-apply.
+            # If the CSS for TextArea is `border: round $primary;`, this should work.
+            # We can also explicitly remove the 'heavy' and 'red' border if that was the only change.
+            # Let's try a more direct reset to what the CSS likely has:
+            description_area.styles.border = ("round", self.app.get_css_variable_rich_compare("primary"))
 
 
             self._set_ui_state(self.STATE_LOADING_PLAN)
