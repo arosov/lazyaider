@@ -17,6 +17,11 @@
     /* gap: 1; */ /* Removed: 'gap' property caused an error. Manage spacing with padding/margins. */
 }
 
+/* Make the plan display container take available vertical space */
+#plan_display_container {
+    height: 1fr;
+}
+
 #loading_container {
     width: 100%;
     align: center middle; /* Center loading indicator and text vertically and horizontally */
@@ -57,7 +62,7 @@ TextArea {
     height: 10; /* Specific height for feature input */
 }
 #plan_display_area {
-    height: 20; /* More height for plan display */
+    height: 1fr; /* Maximize height within its container */
 }
 
 TextArea:focus {
