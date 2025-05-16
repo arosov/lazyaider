@@ -2,6 +2,7 @@ import os
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll, Container # VerticalScroll is not used, but keep for now if other parts might use it.
 from textual.widgets import Button, Footer, Header, Label, Input, Static, ListView, ListItem
+from textual.widgets.list_view import ListView # Explicit import for subclassing clarity
 from textual.validation import Regex, Validator, ValidationResult
 from textual.css.query import NoMatches # Changed from textual.errors import QueryError
 from textual.screen import ModalScreen
@@ -140,12 +141,31 @@ class RenameSessionScreen(ModalScreen[str | None]):
             self.dismiss(new_name)
 
 
+class SessionListView(ListView):
+    """Custom ListView to trigger app exit on Enter key press."""
+
+    def action_select_cursor(self) -> None:
+        """Called when Enter is pressed (or other selection actions)."""
+        super().action_select_cursor()  # Perform default selection logic (posts ListView.Selected)
+        # After the default selection logic (which updates highlight and posts message),
+        # tell the app to process this as a confirmed selection.
+        # self.app will be the SessionSelectorApp instance.
+        # We need to ensure action_select_session is awaitable if it becomes async,
+        # but actions are typically synchronous unless they schedule work.
+        # For now, direct call is fine. If action_select_session becomes async,
+        # we might need to self.app.call_later(self.app.action_select_session) or similar.
+        # However, action_select_session is currently async.
+        # Actions on widgets are typically not async.
+        # Let's schedule the call to the async app action.
+        self.app.call_later(self.app.action_select_session)
+
+
 class SessionSelectorApp(App[str | None]):
     """A Textual app to select an existing tmux session or create/rename one."""
 
     TITLE = "TM4Aider Session Management"
     BINDINGS = [
-        Binding("enter", "try_select_session_with_enter", "Use Selected", show=False, priority=True),
+        Binding("enter", "try_select_session_with_enter", "Use Selected", show=False), # Removed priority=True
     ]
     CSS = """
     Screen {
@@ -227,8 +247,8 @@ class SessionSelectorApp(App[str | None]):
 
             if self.active_sessions:
                 yield Label("Active Sessions:")
-                # ListView will be populated by _populate_session_list if needed
-                with ListView(id="session_list_view"):
+                # Use the custom SessionListView
+                with SessionListView(id="session_list_view"):
                     for session in self.active_sessions:
                         list_item = ListItem(Label(session), name=session)
                         yield list_item
