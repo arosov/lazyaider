@@ -111,6 +111,34 @@ class RenameSessionScreen(ModalScreen[str | None]):
             event.input.border_title = None
             event.input.styles.border = None
 
+    async def on_input_submitted(self, event: Input.Submitted) -> None:
+        """Handle Enter key press on the input field to attempt rename."""
+        if event.input.id == "new_session_name_input_modal":
+            # Simulate the "Rename" button press logic
+            input_widget = event.input
+            new_name = input_widget.value.strip()
+            validation_result = input_widget.validate(new_name) # Re-validate on submit
+            if not validation_result or not validation_result.is_valid:
+                input_widget.border_title = "Validation Error"
+                input_widget.styles.border = ("round", "red")
+                if validation_result and validation_result.failures:
+                    self.notify(validation_result.failures[0].description, title="Invalid Name", severity="error")
+                return
+
+            if new_name == self.current_name:
+                self.dismiss(None)
+                return
+
+            if new_name in self.existing_sessions:
+                input_widget.border_title = "Error: Name Exists"
+                input_widget.styles.border = ("round", "red")
+                self.notify(f"Session '{new_name}' already exists.", title="Name Exists", severity="error")
+                return
+
+            input_widget.border_title = None
+            input_widget.styles.border = None
+            self.dismiss(new_name)
+
 
 class SessionSelectorApp(App[str | None]):
     """A Textual app to select an existing tmux session or create/rename one."""
