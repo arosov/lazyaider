@@ -14,7 +14,7 @@
     /* height: 100%; */ /* Allow natural height based on content */
     align: center top;
     padding: 1;
-    gap: 1; /* Space between elements in the vertical layout */
+    /* gap: 1; */ /* Removed: 'gap' property caused an error. Manage spacing with padding/margins. */
 }
 
 #loading_container {
@@ -32,7 +32,7 @@
     width: 100%;
     text-align: center;
     padding: 1 0;
-    font-weight: bold; /* Make labels stand out a bit */
+    text-style: bold; /* Use text-style for bolding in Textual CSS */
 }
 
 TextArea {
