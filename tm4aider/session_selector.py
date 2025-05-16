@@ -2,7 +2,7 @@ import os
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll, Container # VerticalScroll is not used, but keep for now if other parts might use it.
 from textual.widgets import Button, Footer, Header, Label, Input, Static, ListView, ListItem
-from textual.widgets.list_view import ListView # Explicit import for subclassing clarity
+# ListView is already imported above, removing redundant/incorrect import.
 from textual.validation import Regex, Validator, ValidationResult
 from textual.css.query import NoMatches # Changed from textual.errors import QueryError
 from textual.screen import ModalScreen
