@@ -3,7 +3,7 @@ from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll, Container # VerticalScroll is not used, but keep for now if other parts might use it.
 from textual.widgets import Button, Footer, Header, Label, Input, Static, ListView, ListItem
 from textual.validation import Regex, Validator, ValidationResult
-from textual.errors import QueryError
+from textual.css.query import NoMatches # Changed from textual.errors import QueryError
 
 class SessionNameValidator(Validator):
     def validate(self, value: str) -> ValidationResult:
@@ -144,8 +144,9 @@ class SessionSelectorApp(App[str | None]):
                            isinstance(highlighted_item.name, str) and \
                            highlighted_item.name in self.active_sessions:
                             session_to_use_from_list = highlighted_item.name
-                    except QueryError:
-                        # ListView not found, should not happen if self.active_sessions is true
+                    except NoMatches: # Changed from QueryError
+                        # ListView not found, this can happen if self.active_sessions is empty
+                        # or if the ListView widget somehow isn't there.
                         pass # session_to_use_from_list remains None
                 
                 if session_to_use_from_list:
