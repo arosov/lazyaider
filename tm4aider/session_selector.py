@@ -1,8 +1,9 @@
 import os
 from textual.app import App, ComposeResult
-from textual.containers import VerticalScroll, Container
+from textual.containers import VerticalScroll, Container # VerticalScroll is not used, but keep for now if other parts might use it.
 from textual.widgets import Button, Footer, Header, Label, Input, Static, ListView, ListItem
 from textual.validation import Regex, Validator, ValidationResult
+from textual.errors import QueryError
 
 class SessionNameValidator(Validator):
     def validate(self, value: str) -> ValidationResult:
@@ -128,14 +129,30 @@ class SessionSelectorApp(App[str | None]):
                     new_session_input.border_title = None
                     new_session_input.styles.border = None # Reset border
 
-                self.selected_session_name = new_session_name
-                self.exit(self.selected_session_name)
-            elif self.selected_session_name and self.active_sessions and self.selected_session_name in self.active_sessions:
-                # An existing session was selected from the list
-                self.exit(self.selected_session_name)
+                # Valid new session name entered
+                self.exit(new_session_name) # Exit with the new session name
             else:
-                # No new name, and no valid existing selection
-                self.notify("Please select an existing session or enter a new session name.", title="Selection Required", severity="warning")
+                # Input field is empty, try to use selection from the list
+                session_to_use_from_list = None
+                if self.active_sessions: # Only proceed if there are active sessions to select from
+                    try:
+                        list_view = self.query_one(ListView)
+                        highlighted_item = list_view.highlighted_child # Get the currently highlighted ListItem
+
+                        if highlighted_item is not None and \
+                           hasattr(highlighted_item, 'name') and \
+                           isinstance(highlighted_item.name, str) and \
+                           highlighted_item.name in self.active_sessions:
+                            session_to_use_from_list = highlighted_item.name
+                    except QueryError:
+                        # ListView not found, should not happen if self.active_sessions is true
+                        pass # session_to_use_from_list remains None
+                
+                if session_to_use_from_list:
+                    self.exit(session_to_use_from_list)
+                else:
+                    # No new name entered, and nothing validly selected from the list
+                    self.notify("Please select an existing session or enter a new session name.", title="Selection Required", severity="warning")
         
         elif button_id == "btn_cancel":
             self.exit(None) # Exit without a selection
