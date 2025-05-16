@@ -1,0 +1,78 @@
+#app-container {
+    width: 100%;
+    height: 100%;
+    padding: 1 2;
+    align: center top; /* Align content to the top */
+}
+
+.hidden {
+    display: none !important; /* Use !important to ensure override if needed */
+}
+
+#feature_input_container, #loading_container, #plan_display_container {
+    width: 100%;
+    /* height: 100%; */ /* Allow natural height based on content */
+    align: center top;
+    padding: 1;
+    gap: 1; /* Space between elements in the vertical layout */
+}
+
+#loading_container {
+    padding-top: 5; /* Add some space for loading indicator */
+    height: 20; /* Give it some fixed height to center content */
+    align: center middle; /* Center loading indicator and text */
+}
+#loading_subtext {
+    width: 100%;
+    text-align: center;
+    color: $text-muted; /* Make subtext less prominent */
+}
+
+.label {
+    width: 100%;
+    text-align: center;
+    padding: 1 0;
+    font-weight: bold; /* Make labels stand out a bit */
+}
+
+TextArea {
+    width: 90%;
+    max-width: 100%; /* Ensure it doesn't overflow small terminals */
+    height: 15; /* Default height, can be overridden */
+    border: round $primary;
+    margin-bottom: 1; /* Add some space below text areas */
+}
+#feature_description_input {
+    height: 10; /* Specific height for feature input */
+}
+#plan_display_area {
+    height: 20; /* More height for plan display */
+}
+
+TextArea:focus {
+    border: round $primary-focus;
+}
+
+/* Styling for error state on TextArea */
+TextArea.-error-border {
+    border: heavy red;
+    border-title-color: red;
+    border-title-style: bold;
+}
+
+
+.button-container {
+    width: 90%;
+    max-width: 100%;
+    align: center middle;
+    padding-top: 1;
+    height: auto; /* Allow buttons to define height */
+    layout: horizontal;
+    grid-size: 2; /* For two buttons */
+    grid-gutter: 1; /* Spacing between buttons in the grid */
+}
+
+Button {
+    width: 100%; /* Buttons will take up available grid space */
+    /* margin: 0 1%; */ /* No longer needed with grid layout */
+}
