@@ -100,11 +100,10 @@ if __name__ == "__main__":
             sys.exit(0) # Exit after handling the plan
         else:
             # If plan_markdown is None, it means the user cancelled or discarded the plan.
-            # In this case, we fall through to the original tmux session management logic.
-            print("Plan generation cancelled or discarded. Proceeding with tmux session management if applicable.", file=sys.stderr)
-            # Note: The message about bypassing tmux is removed, as we are now proceeding to it.
+            print("Plan generation cancelled or discarded by the user. Exiting.", file=sys.stderr)
+            sys.exit(0) # Exit even if plan generation was cancelled
 
-        # Original tmux session management logic starts here
+        # Original tmux session management logic starts here (now unreachable)
         # This code will only be reached if FeatureInputApp returns None (no plan generated/saved)
         managed_sessions_from_config = config.settings.get("managed_sessions", [])
         active_managed_sessions = [
