@@ -113,8 +113,11 @@ class FeatureInputApp(App[str | None]):
             # For now, let's rely on CSS to re-apply.
             # If the CSS for TextArea is `border: round $primary;`, this should work.
             # We can also explicitly remove the 'heavy' and 'red' border if that was the only change.
-            # Let's try a more direct reset to what the CSS likely has:
-            description_area.styles.border = ("round", self.app.get_css_variable_rich_compare("primary"))
+            # To reset to the CSS-defined style, we clear the inline overrides.
+            # Textual will then fall back to the styles defined in feature_input_app.tcss for TextArea.
+            description_area.styles.border_type = None 
+            description_area.styles.border_title_color = None
+            description_area.styles.border = None # This should make it revert to the CSS `border: round $primary;`
 
 
             self._set_ui_state(self.STATE_LOADING_PLAN)
