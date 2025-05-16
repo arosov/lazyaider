@@ -55,13 +55,9 @@ class FeatureInputApp(App[str | None]):
                 yield LoadingIndicator() # Removed styles argument, as it's not supported in constructor
                 yield Static(
                     "This may take a moment. Press Esc to try and cancel.",
-                    id="loading_subtext",
-                    styles={
-                        "height": 3,  # Explicit height for the static text area
-                        "background": "ansired",  # Bright background for debugging visibility
-                        "width": "100%", # Ensure it spans horizontally
-                        "text_align": "center", # Center text (already in CSS but good to be explicit here)
-                    }
+                    id="loading_subtext"
+                    # The 'styles' argument was removed from here.
+                    # Styling is handled by tm4aider/feature_input_app.tcss
                 )
 
             # Plan Display Area (State 3)
