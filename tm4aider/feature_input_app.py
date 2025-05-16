@@ -52,8 +52,17 @@ class FeatureInputApp(App[str | None]):
 
             # Loading Indicator Area (State 2)
             with Vertical(id="loading_container", classes="hidden"):
-                yield LoadingIndicator() # Initialize without default text, just the spinner
-                yield Static("This may take a moment. Press Esc to try and cancel.", id="loading_subtext")
+                yield LoadingIndicator(styles={"height": 1}) # Try to constrain spinner height
+                yield Static(
+                    "This may take a moment. Press Esc to try and cancel.",
+                    id="loading_subtext",
+                    styles={
+                        "height": 3,  # Explicit height for the static text area
+                        "background": "ansired",  # Bright background for debugging visibility
+                        "width": "100%", # Ensure it spans horizontally
+                        "text_align": "center", # Center text (already in CSS but good to be explicit here)
+                    }
+                )
 
             # Plan Display Area (State 3)
             with Vertical(id="plan_display_container", classes="hidden"):
