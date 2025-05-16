@@ -66,22 +66,33 @@ def generate_plan(feature_description: str) -> str:
     # If config.py hasn't set up `DEFAULT_LLM_MODEL` or if it's missing,
     # litellm might default or error. It's better to ensure a default here too.
     model_from_config = config.settings.get("llm_model")
-    
+    api_key_from_config = config.settings.get("llm_api_key")
+
     if not model_from_config:
         # Fallback if 'llm_model' is not in config or is empty.
         # This default should ideally match or be consistent with config.py's DEFAULT_LLM_MODEL
-        model = "gpt-3.5-turbo" 
+        model = "gpt-3.5-turbo"
         print(f"Warning: 'llm_model' not found or empty in config. Using default: {model}", file=sys.stderr)
     else:
         model = model_from_config
 
+    # Determine the API key to use
+    api_key_to_use = api_key_from_config
+
     # Check for API keys if using common providers, as litellm might not give clear errors.
     # This is a helper and not exhaustive.
-    if "gpt" in model and not os.getenv("OPENAI_API_KEY"):
-        print("Warning: OPENAI_API_KEY environment variable not set. LLM call to OpenAI model might fail.", file=sys.stderr)
-    elif "claude" in model and not os.getenv("ANTHROPIC_API_KEY"):
-        print("Warning: ANTHROPIC_API_KEY environment variable not set. LLM call to Anthropic model might fail.", file=sys.stderr)
-    # Add more checks for other providers as needed
+    # Priority: 1. Config file, 2. Environment variable
+    if "gpt" in model:
+        if not api_key_to_use and not os.getenv("OPENAI_API_KEY"):
+            print("Warning: OpenAI API key not found in config ('llm_api_key') or OPENAI_API_KEY environment variable. LLM call to OpenAI model might fail.", file=sys.stderr)
+        elif not api_key_to_use: # Use env var if config key is not set
+            api_key_to_use = os.getenv("OPENAI_API_KEY")
+    elif "claude" in model:
+        if not api_key_to_use and not os.getenv("ANTHROPIC_API_KEY"):
+            print("Warning: Anthropic API key not found in config ('llm_api_key') or ANTHROPIC_API_KEY environment variable. LLM call to Anthropic model might fail.", file=sys.stderr)
+        elif not api_key_to_use: # Use env var if config key is not set
+            api_key_to_use = os.getenv("ANTHROPIC_API_KEY")
+    # Add more checks for other providers as needed, following the same pattern
 
     prompt = PLAN_GENERATION_PROMPT_TEMPLATE.format(feature_description=feature_description)
     messages = [{"role": "user", "content": prompt}]
