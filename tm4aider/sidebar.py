@@ -38,6 +38,7 @@ class Sidebar(App):
     # These will be set dynamically when the app is launched by the main script logic
     TMUX_TARGET_PANE: str | None = None
     TMUX_SESSION_NAME: str | None = None
+    APP_CONFIG: dict | None = None # To hold the loaded config settings
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
@@ -95,13 +96,24 @@ class Sidebar(App):
     async def action_custom_quit(self, kill_session: bool = True) -> None:
         """Custom quit action that also attempts to kill the tmux session."""
         if kill_session and self.TMUX_SESSION_NAME:
+            session_to_kill = self.TMUX_SESSION_NAME # Capture before it might be cleared
             try:
-                tmux_utils.kill_session(self.TMUX_SESSION_NAME)
-                self.log(f"Sent kill-session for tmux session: {self.TMUX_SESSION_NAME}")
+                tmux_utils.kill_session(session_to_kill)
+                self.log(f"Sent kill-session for tmux session: {session_to_kill}")
+                
+                # Remove from config after successful kill
+                # Requires config module and settings to be accessible
+                from tm4aider import config as app_config # late import
+                app_config.remove_session_from_config(session_to_kill)
+                self.log(f"Removed session '{session_to_kill}' from config.")
+
             except FileNotFoundError:
                 self.log.error("Error: tmux command not found when trying to kill session.")
             except subprocess.CalledProcessError as e: # subprocess is still needed for this exception type
                 # Log error, but proceed to quit app anyway
-                self.log.error(f"Error killing tmux session '{self.TMUX_SESSION_NAME}': {e.stderr.decode() if e.stderr else e}")
+                self.log.error(f"Error killing tmux session '{session_to_kill}': {e.stderr.decode() if e.stderr else e}")
+            except Exception as e:
+                self.log.error(f"An unexpected error occurred during session removal from config: {e}")
+
 
         self.app.exit() # Proceed with normal app quit
