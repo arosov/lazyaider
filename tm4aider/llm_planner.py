@@ -60,7 +60,8 @@ def generate_plan(feature_description: str) -> str:
         feature_description: The user's description of the feature to implement.
 
     Returns:
-        A string containing the generated plan in Markdown format, or an error message.
+        On success, a tuple: (plan_content: str, model_name: str, total_tokens: int | None).
+        On failure, an error message string.
     """
     # Ensure config is loaded. `config.settings` should be available.
     # If config.py hasn't set up `DEFAULT_LLM_MODEL` or if it's missing,
@@ -108,16 +109,17 @@ def generate_plan(feature_description: str) -> str:
         )
         # Accessing content according to litellm's current typical response structure
         if response.choices and response.choices[0].message and response.choices[0].message.content:
-            plan_content = response.choices[0].message.content
+            plan_content = response.choices[0].message.content.strip()
             
-            # Display token usage
+            total_tokens: int | None = None
             if response.usage and hasattr(response.usage, 'total_tokens'):
                 total_tokens = response.usage.total_tokens
-                print(f"LLM ({model}) response received. Token usage: {total_tokens} tokens.", file=sys.stderr)
-            else:
-                print(f"LLM ({model}) response received. Token usage information not available in response.", file=sys.stderr)
+            
+            # Log to stderr for debugging/logging, UI will display it too
+            token_msg = f"{total_tokens} tokens" if total_tokens is not None else "token usage N/A"
+            print(f"LLM ({model}) response received. Usage: {token_msg}.", file=sys.stderr)
                 
-            return plan_content.strip()
+            return plan_content, model, total_tokens
         else:
             error_message = "Error: LLM response structure was unexpected or content was empty."
             print(error_message, file=sys.stderr)

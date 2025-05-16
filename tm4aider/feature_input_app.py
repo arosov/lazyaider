@@ -6,7 +6,7 @@ from textual.worker import Worker # Removed WorkerState as it's not directly use
 
 # Import the LLM planner function and config
 from .llm_planner import generate_plan
-# config is implicitly used by generate_plan, no direct import needed here unless for other settings
+from . import config # Import config to access settings like model name
 
 class FeatureInputApp(App[str | None]):
     """A Textual app to get feature description, generate a plan, and display it."""
@@ -120,7 +120,11 @@ class FeatureInputApp(App[str | None]):
             description_area.styles.border_title_color = None
             description_area.styles.border = None # This should make it revert to the CSS `border: round $primary;`
 
-
+            # Get model name for display
+            current_model_name = config.settings.get("llm_model", "Unknown Model")
+            loading_text_widget = self.query_one("#loading_subtext", Static)
+            loading_text_widget.update(f"Generating plan with {current_model_name}, please wait...")
+            
             self._set_ui_state(self.STATE_LOADING_PLAN)
             # Run generate_plan in a worker thread to avoid blocking UI
             if self._llm_worker is not None: # Should not happen, but good practice
@@ -142,21 +146,40 @@ class FeatureInputApp(App[str | None]):
     def _call_generate_plan(self, description: str) -> None:
         """Synchronous wrapper to call generate_plan and then update UI from thread."""
         try:
-            plan = generate_plan(description)
-            self.call_from_thread(self._handle_plan_generation_result, plan)
+            # generate_plan now returns a tuple (plan_content, model_name, token_count) or an error string
+            plan_data = generate_plan(description)
+            self.call_from_thread(self._handle_plan_generation_result, plan_data)
         except Exception as e:
-            error_plan = f"# Error During Plan Generation Call\n\nAn unexpected error occurred: {e}"
-            self.call_from_thread(self._handle_plan_generation_result, error_plan)
+            # This catch is for unexpected errors in the _call_generate_plan itself,
+            # not for errors returned by generate_plan (which are handled as strings).
+            error_message = f"# Error During Plan Generation Call\n\nAn unexpected error occurred: {type(e).__name__} - {e}"
+            self.call_from_thread(self._handle_plan_generation_result, error_message)
 
 
-    def _handle_plan_generation_result(self, plan_content: str) -> None:
+    def _handle_plan_generation_result(self, plan_data: tuple[str, str, int | None] | str) -> None:
         """Called from worker thread with the result of plan generation."""
         self._llm_worker = None # Clear worker reference
-        self.generated_plan_content = plan_content
         plan_display_widget = self.query_one("#plan_display_area", TextArea)
         plan_display_widget.clear()
-        plan_display_widget.load_text(plan_content)
+
+        if isinstance(plan_data, tuple):
+            plan_content, model_name, token_count = plan_data
+            self.generated_plan_content = plan_content # Store the actual plan for exit
+
+            display_text = plan_content
+            display_text += f"\n\n---\nModel used: {model_name}"
+            if token_count is not None:
+                display_text += f"\nToken usage: {token_count} tokens"
+            else:
+                display_text += f"\nToken usage: N/A"
+            plan_display_widget.load_text(display_text)
+        else: # It's an error string
+            self.generated_plan_content = plan_data # Store the error message
+            plan_display_widget.load_text(plan_data)
+        
         self._set_ui_state(self.STATE_DISPLAY_PLAN)
+        # Reset loading subtext for next time
+        self.query_one("#loading_subtext", Static).update("This may take a moment. Press Esc to try and cancel.")
 
 
     async def action_request_quit_or_reset(self) -> None:
