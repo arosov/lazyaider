@@ -50,7 +50,7 @@ class RenameSessionScreen(ModalScreen[str | None]):
     }
 
     Button { /* Style for Buttons within this modal */
-        min-width: 15;
+        width: 17; /* Accommodates "Rename" / "Cancel" with padding */
         margin-left: 1;
         margin-right: 1;
     }
@@ -151,7 +151,7 @@ class SessionSelectorApp(App[str | None]):
         margin-top: 1;
     }
     Button {
-        min-width: 15; /* Ensure buttons have a decent minimum width */
+        width: 24; /* Accommodates "Create New Session" with padding */
         margin-left: 1;
         margin-right: 1;
     }
