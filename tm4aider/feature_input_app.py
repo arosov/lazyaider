@@ -52,7 +52,7 @@ class FeatureInputApp(App[str | None]):
 
             # Loading Indicator Area (State 2)
             with Vertical(id="loading_container", classes="hidden"):
-                yield LoadingIndicator(styles={"height": 1}) # Try to constrain spinner height
+                yield LoadingIndicator() # Removed styles argument, as it's not supported in constructor
                 yield Static(
                     "This may take a moment. Press Esc to try and cancel.",
                     id="loading_subtext",
