@@ -47,14 +47,30 @@ class Sidebar(App):
     async def on_mount(self) -> None:
         """Apply theme from config when app is mounted."""
         from tm4aider import config as app_config_module
-        self.theme = app_config_module.settings.get("theme_name", app_config_module.DEFAULT_THEME_NAME)
+        theme_name_from_config = app_config_module.settings.get("theme_name", app_config_module.DEFAULT_THEME_NAME)
+
+        if theme_name_from_config == "dark":
+            self.dark = True
+        elif theme_name_from_config == "light":
+            self.dark = False
+        else:
+            # For custom themes, they must be registered by the app.
+            self.theme = theme_name_from_config
         # App.on_mount() is an empty async method, so no explicit super call is strictly needed here.
 
     def watch_theme(self, old_theme: str | None, new_theme: str | None) -> None:
         """Saves the theme when it changes."""
         if new_theme is not None:
             from tm4aider import config as app_config_module
-            app_config_module.update_theme_in_config(new_theme)
+            # Only save if it's not one of the built-in ones handled by watch_dark
+            if new_theme not in ("light", "dark"):
+                app_config_module.update_theme_in_config(new_theme)
+    
+    def watch_dark(self, dark: bool) -> None:
+        """Saves the theme ("light" or "dark") when App.dark changes."""
+        from tm4aider import config as app_config_module
+        new_theme_name = "dark" if dark else "light"
+        app_config_module.update_theme_in_config(new_theme_name)
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
