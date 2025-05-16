@@ -153,8 +153,23 @@ if __name__ == "__main__":
             if session_exists_check.returncode != 0:
                 # Session does not exist, create and configure it
                 print(f"Creating and configuring new tmux session: {SESSION_NAME}")
+                # Get current terminal size
+                try:
+                    terminal_size = os.get_terminal_size()
+                    term_width = terminal_size.columns
+                    term_height = terminal_size.lines
+                except OSError:
+                    # Fallback if terminal size can't be determined (e.g., not a TTY)
+                    # Tmux will use its default or the client's size upon attach.
+                    term_width = None
+                    term_height = None
+                    print("Warning: Could not determine terminal size. Tmux will use default sizing.", file=sys.stderr)
+
                 # Create a new detached session. The first window (0) and pane (0) gets default shell.
-                subprocess.run(["tmux", "new-session", "-d", "-s", SESSION_NAME, "-n", "main"], check=True)
+                new_session_cmd = ["tmux", "new-session", "-d", "-s", SESSION_NAME, "-n", "main"]
+                if term_width is not None and term_height is not None:
+                    new_session_cmd.extend(["-x", str(term_width), "-y", str(term_height)])
+                subprocess.run(new_session_cmd, check=True)
 
                 # Split pane 0.0 (shell_pane_target) horizontally. New pane (app_pane_target) is to the right, taking 10% width.
                 subprocess.run(["tmux", "split-window", "-h", "-l", "15%", "-t", shell_pane_target], check=True)
