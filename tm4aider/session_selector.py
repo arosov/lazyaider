@@ -205,22 +205,43 @@ class SessionSelectorApp(App[str | None]):
 
     def on_mount(self) -> None:
         """Called when app is mounted."""
-        if self.active_sessions:
+        list_view = None
+        try:
+            # ListView is only composed if self.active_sessions is truthy.
             list_view = self.query_one(ListView)
-            if list_view.children: # Check if there are items in the list view
-                list_view.index = 0 # Select the first item
-                # on_list_view_selected will be triggered, setting selected_session_name and enabling buttons.
-            list_view.focus() # Ensure the list view has focus for keyboard navigation
-            # If list_view.index was set, on_list_view_selected handles button states.
-            # If list was empty (though self.active_sessions was true), buttons remain disabled.
-            if not list_view.children or list_view.index is None or list_view.index < 0 :
-                 self.query_one("#btn_use_selected", Button).disabled = True
-                 self.query_one("#btn_rename_selected", Button).disabled = True
+        except NoMatches:
+            pass # list_view remains None, handled below.
+
+        if list_view and list_view.children: # Active sessions exist and ListView is populated.
+            list_view.index = 0 # Select the first item.
+            
+            # Manually update selection state and button states, as setting index
+            # programmatically doesn't fire the on_list_view_selected event.
+            first_item_widget = list_view.children[0]
+            if isinstance(first_item_widget, ListItem) and first_item_widget.name:
+                self.selected_session_name = first_item_widget.name
+                self.query_one("#btn_use_selected", Button).disabled = False
+                self.query_one("#btn_rename_selected", Button).disabled = False
+            else:
+                # Fallback: if the first item isn't as expected (e.g., no name), keep buttons disabled.
+                self.selected_session_name = None # Ensure it's cleared
+                self.query_one("#btn_use_selected", Button).disabled = True
+                self.query_one("#btn_rename_selected", Button).disabled = True
+            
+            list_view.focus()
         else:
-            # No sessions, focus on create new button
-            self.query_one("#btn_create_new", Button).focus()
-            self.query_one("#btn_use_selected", Button).disabled = True 
+            # This block covers:
+            # 1. No active sessions (so list_view is None or ListView was not composed).
+            # 2. Active sessions, but ListView somehow has no children (e.g., self.active_sessions was empty list).
+            self.query_one("#btn_use_selected", Button).disabled = True
             self.query_one("#btn_rename_selected", Button).disabled = True
+            try:
+                # Focus on "Create New" button as it's the most likely action.
+                self.query_one("#btn_create_new", Button).focus()
+            except NoMatches:
+                # This should ideally not happen if the button is always composed.
+                # If it does, focus will fall back to Textual's default.
+                pass
 
     def _populate_session_list(self) -> None:
         """Populates or repopulates the session list view."""
