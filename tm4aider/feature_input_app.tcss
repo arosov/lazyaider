@@ -27,7 +27,7 @@
     text-align: center;
     color: $text; /* Changed from $text-muted to ensure visibility for debugging */
     height: 3; /* Explicit height for debugging */
-    background: ansired; /* Bright background for debugging */
+    background: ansi_red; /* Corrected: Bright background for debugging */
     /* If $text-muted was very light, it might be hard to see on ansired. */
     /* Consider a contrasting color like white or black if needed, e.g., color: white; */
 }
