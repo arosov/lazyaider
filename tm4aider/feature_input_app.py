@@ -30,7 +30,7 @@ class FeatureInputApp(App[str | None]):
 
         # Set theme based on config
         theme_name = config.settings.get("theme_name", config.DEFAULT_THEME_NAME)
-        self.theme = theme_name # Use the theme name directly
+        self.dark = theme_name == "dark" # Control theme via self.dark for built-in light/dark
 
         self.current_ui_state = self.STATE_INPUT_FEATURE
         self.generated_plan_content: str | None = None
