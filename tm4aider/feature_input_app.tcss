@@ -17,7 +17,10 @@
     /* gap: 1; */ /* Removed: 'gap' property caused an error. Manage spacing with padding/margins. */
 }
 
-/* Make the plan display container take available vertical space */
+/* Make feature input and plan display containers take available vertical space */
+#feature_input_container {
+    height: 1fr;
+}
 #plan_display_container {
     height: 1fr;
 }
@@ -52,14 +55,14 @@
 }
 
 TextArea {
-    width: 90%;
+    width: 100%; /* Use full available width */
     max-width: 100%; /* Ensure it doesn't overflow small terminals */
     height: 15; /* Default height, can be overridden */
     border: round $primary;
     margin-bottom: 1; /* Add some space below text areas */
 }
 #feature_description_input {
-    height: 10; /* Specific height for feature input */
+    height: 1fr; /* Maximize height within its container */
 }
 #plan_display_area {
     height: 1fr; /* Maximize height within its container */
