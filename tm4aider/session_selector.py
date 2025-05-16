@@ -45,14 +45,14 @@ class RenameSessionScreen(ModalScreen[str | None]):
     }
     .button_row { /* Style for button row within this modal */
         width: 100%;
+        layout: horizontal; /* Ensure buttons are laid out horizontally */
         align-horizontal: center; /* Center buttons horizontally */
         margin-top: 1;
     }
 
     Button { /* Style for Buttons within this modal */
-        width: 17; /* Accommodates "Rename" / "Cancel" with padding */
-        margin-left: 1;
-        margin-right: 1;
+        width: auto; /* Buttons wrap their content */
+        margin: 0 1; /* Consistent margin */
     }
     """
 
@@ -193,13 +193,13 @@ class SessionSelectorApp(App[str | None]):
     }
     .button_row {
         width: 100%;
+        layout: horizontal; /* Ensure buttons are laid out horizontally */
         align-horizontal: center; /* Center buttons horizontally */
         margin-top: 1;
     }
     Button {
-        width: 24; /* Accommodates "Create New Session" with padding */
-        margin-left: 1;
-        margin-right: 1;
+        width: auto; /* Buttons wrap their content */
+        margin: 0 1; /* Consistent margin */
     }
     """
 

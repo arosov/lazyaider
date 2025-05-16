@@ -81,9 +81,9 @@ TextArea.-error-border {
 
 
 .button-container {
-    width: 90%;
+    width: 100%; /* Ensure container takes full width for centering its children */
     max-width: 100%;
-    align: center middle; /* This centers the container block itself */
+    /* align: center middle; /* Removed - parent container handles this block's alignment */
     padding-top: 1;
     height: auto; /* Allow buttons to define height */
     layout: horizontal;
