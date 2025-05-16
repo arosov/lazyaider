@@ -18,10 +18,21 @@
 }
 
 #loading_container {
-    padding-top: 5; /* Add some space for loading indicator */
-    height: 20; /* Give it some fixed height to center content */
-    align: center middle; /* Center loading indicator and text */
+    width: 100%; /* Keep width */
+    /* padding-top: 5; */ /* Temporarily removed for debugging */
+    /* height: 20; */   /* Temporarily removed to let it size to content */
+    /* align: center middle; */ /* Temporarily removed for debugging */
+    border: thick green; /* DEBUG: Make container border visible */
+    margin-bottom: 1; /* Ensure some space below if it's rendered */
 }
+
+#spinner { /* Style for the LoadingIndicator widget */
+    width: 100%;
+    height: 1; /* Explicit height for the spinner line */
+    text-align: center; /* Center the spinner dots */
+    background: ansiblue; /* DEBUG: Make spinner background visible */
+}
+
 #loading_subtext {
     width: 100%;
     text-align: center;
