@@ -161,16 +161,3 @@ if __name__ == '__main__':
             print(f"\nError saving test_plan.md: {e}", file=sys.stderr)
     else:
         print("\nPlan generation failed. See error message above.", file=sys.stderr)
-
-```
-
-I also noticed that `tm4aider/config.py` is missing the `DEFAULT_LLM_MODEL` definition and its handling in `load_config`. I'll add that now.
-
-```python
-tm4aider/config.py
-<<<<<<< SEARCH
-CONFIG_FILENAME = ".tm4aider.conf.yml"
-DEFAULT_SIDEPANE_PERCENT_WIDTH = 20
-DEFAULT_THEME_NAME = "light" # Textual's default theme
-
-def find_config_file() -> str | None:

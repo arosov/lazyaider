@@ -5,6 +5,7 @@ import yaml
 CONFIG_FILENAME = ".tm4aider.conf.yml"
 DEFAULT_SIDEPANE_PERCENT_WIDTH = 20
 DEFAULT_THEME_NAME = "light" # Textual's default theme
+DEFAULT_LLM_MODEL = "gpt-3.5-turbo" # Default LLM model
 
 def find_config_file() -> str | None:
     """
