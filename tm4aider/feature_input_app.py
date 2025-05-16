@@ -115,6 +115,18 @@ class FeatureInputApp(App[str | None]):
 
         self._set_ui_state(self.STATE_INPUT_FEATURE)
 
+    def watch_theme(self, old_theme: str | None, new_theme: str | None) -> None:
+        """Saves the theme when it changes."""
+        if new_theme is not None:
+            # Only save if it's not one of the built-in ones handled by watch_dark
+            if new_theme not in ("light", "dark"):
+                config.update_theme_in_config(new_theme)
+
+    def watch_dark(self, dark: bool) -> None:
+        """Saves the theme ("light" or "dark") when App.dark changes."""
+        new_theme_name = "dark" if dark else "light"
+        config.update_theme_in_config(new_theme_name)
+
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         button_id = event.button.id
 
