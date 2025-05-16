@@ -51,7 +51,7 @@ class TM4Aider(App):
                 yield Static("Controls", classes="sidebar-title")
                 yield Button("Start Aider", id="btn_start_aider", variant="success")
                 yield Button("Detach Session", id="btn_detach_session", variant="primary")
-                yield Button("Quit Session", id="btn_quit_session", variant="error")
+                yield Button("Destroy Session", id="btn_quit_session", variant="error")
         yield Footer()
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
