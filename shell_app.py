@@ -159,8 +159,8 @@ if __name__ == "__main__":
                 # Enable mouse mode for the session (includes focus follows mouse for panes)
                 subprocess.run(["tmux", "set-option", "-g", "mouse", "on"], check=True)
                 
-                # Split pane 0.0 (shell_pane_target) horizontally. New pane (app_pane_target) is to the right.
-                subprocess.run(["tmux", "split-window", "-h", "-t", shell_pane_target], check=True)
+                # Split pane 0.0 (shell_pane_target) horizontally. New pane (app_pane_target) is to the right, taking 20% width.
+                subprocess.run(["tmux", "split-window", "-h", "-p", "20", "-t", shell_pane_target], check=True)
                 
                 # Construct the command to run this script (shell_app.py) inside the app_pane_target
                 # This recursive call will have --run-in-tmux-pane and --session-name set.
