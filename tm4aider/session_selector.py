@@ -68,12 +68,19 @@ class SessionSelectorApp(App[str | None]):
         with Container(id="dialog"):
             yield Header(show_clock=False)
             yield Label("Select an active session or create a new one:")
-            
+
             if self.active_sessions:
                 yield Label("Active Sessions:")
-                with VerticalScroll(id="session_list_view"):
-                    for session in self.active_sessions:
-                        yield ListItem(Label(session, id=f"session_{session}"))
+                # Use ListView instead of VerticalScroll for list items
+                list_view = ListView(id="session_list_view")
+                for session in self.active_sessions:
+                    # Ensure ListItem children are focusable by default or make Label focusable
+                    # Label itself is not focusable by default, ListItem handles focus.
+                    list_item = ListItem(Label(session))
+                    # Store the session name in the ListItem's name attribute for easy retrieval
+                    list_item.name = session 
+                    list_view.append(list_item)
+                yield list_view
             else:
                 yield Static("No active managed sessions found.")
 
@@ -91,7 +98,7 @@ class SessionSelectorApp(App[str | None]):
     def on_mount(self) -> None:
         """Called when app is mounted."""
         if self.active_sessions:
-            self.query_one(VerticalScroll).focus()
+            self.query_one(ListView).focus()
         else:
             self.query_one("#new_session_name_input").focus()
 
@@ -99,11 +106,9 @@ class SessionSelectorApp(App[str | None]):
         """Handle list item selection."""
         # Clear the input field if a list item is selected
         self.query_one("#new_session_name_input", Input).value = ""
-        # The actual label text is inside the ListItem's child Label
-        if event.item and event.item.children:
-            session_label = event.item.children[0]
-            if isinstance(session_label, Label) and session_label.id:
-                 self.selected_session_name = session_label.id.replace("session_", "")
+        # Retrieve the session name from the ListItem's name attribute
+        if event.item and event.item.name:
+            self.selected_session_name = event.item.name
 
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -141,10 +146,12 @@ class SessionSelectorApp(App[str | None]):
         """Clear list selection if user types in input."""
         if event.input.id == "new_session_name_input" and event.value:
             if self.active_sessions:
-                list_view = self.query_one(VerticalScroll, VerticalScroll) # Assuming VerticalScroll wraps ListView items
-                # This is tricky as ListView doesn't have a direct clear_selection.
-                # For now, just nullify internal tracking. User must click proceed.
-                self.selected_session_name = None 
+                try:
+                    list_view = self.query_one(ListView)
+                    list_view.clear_selection() # Clear selection in the ListView widget
+                except Exception: # ListView might not exist if no active_sessions
+                    pass 
+                self.selected_session_name = None # Also clear internal tracking
             # Reset validation appearance on change
             event.input.border_title = None
             event.input.styles.border = None
