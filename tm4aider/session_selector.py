@@ -166,6 +166,16 @@ class SessionSelectorApp(App[str | None]):
         # This is for the caller to know what renames happened if a session is picked after renaming.
         self.renamed_map: dict[str, str] = {}
 
+        # Apply theme from config
+        from tm4aider import config as app_config_module
+        self.theme = app_config_module.settings.get("theme_name", app_config_module.DEFAULT_THEME_NAME)
+
+    def watch_theme(self, old_theme: str | None, new_theme: str | None) -> None:
+        """Saves the theme when it changes."""
+        if new_theme is not None:
+            from tm4aider import config as app_config_module
+            app_config_module.update_theme_in_config(new_theme)
+
     def _generate_unique_name_from_base(self, base_name: str, existing_names: list[str]) -> str:
         """Generates a unique name: base_name, then base_name-1, base_name-2, etc."""
         if base_name not in existing_names:

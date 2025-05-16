@@ -4,6 +4,7 @@ import yaml
 
 CONFIG_FILENAME = ".tm4aider.conf.yml"
 DEFAULT_SIDEPANE_PERCENT_WIDTH = 20
+DEFAULT_THEME_NAME = "light" # Textual's default theme
 
 def find_config_file() -> str | None:
     """
@@ -48,6 +49,11 @@ def load_config() -> dict:
         if "managed_sessions" in config: # Value exists but is not a list
             print(f"Warning: 'managed_sessions' in {config_path or 'config'} is not a list. Initializing as empty list.", file=sys.stderr)
         config["managed_sessions"] = []
+
+    if not isinstance(config.get("theme_name"), str):
+        if "theme_name" in config: # Value exists but is not a str
+            print(f"Warning: 'theme_name' in {config_path or 'config'} is not a string. Using default value.", file=sys.stderr)
+        config["theme_name"] = DEFAULT_THEME_NAME
     
     return config
 
@@ -82,4 +88,11 @@ def remove_session_from_config(session_name: str) -> None:
     """Removes a session name from the managed_sessions list in config and saves."""
     if session_name in settings.get("managed_sessions", []):
         settings["managed_sessions"].remove(session_name)
+        save_config(settings)
+
+def update_theme_in_config(theme_name: str) -> None:
+    """Updates the theme name in config and saves."""
+    current_theme = settings.get("theme_name")
+    if current_theme != theme_name:
+        settings["theme_name"] = theme_name
         save_config(settings)

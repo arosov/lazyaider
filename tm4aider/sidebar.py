@@ -40,6 +40,18 @@ class Sidebar(App):
     TMUX_SESSION_NAME: str | None = None
     APP_CONFIG: dict | None = None # To hold the loaded config settings
 
+    def __init__(self):
+        super().__init__()
+        # Apply theme from config
+        from tm4aider import config as app_config_module
+        self.theme = app_config_module.settings.get("theme_name", app_config_module.DEFAULT_THEME_NAME)
+
+    def watch_theme(self, old_theme: str | None, new_theme: str | None) -> None:
+        """Saves the theme when it changes."""
+        if new_theme is not None:
+            from tm4aider import config as app_config_module
+            app_config_module.update_theme_in_config(new_theme)
+
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         yield Header()
