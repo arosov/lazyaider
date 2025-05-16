@@ -27,6 +27,11 @@ class FeatureInputApp(App[str | None]):
 
     def __init__(self):
         super().__init__()
+
+        # Set theme based on config
+        theme_name = config.settings.get("theme_name", config.DEFAULT_THEME_NAME)
+        self.dark = theme_name == "dark"
+
         self.current_ui_state = self.STATE_INPUT_FEATURE
         self.generated_plan_content: str | None = None
         self._llm_worker: Worker | None = None
