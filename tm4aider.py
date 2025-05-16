@@ -81,7 +81,10 @@ if __name__ == "__main__":
 
         if active_managed_sessions:
             print("Found active managed sessions. Launching selector...")
-            selector_app = SessionSelectorApp(active_sessions=active_managed_sessions)
+            selector_app = SessionSelectorApp(
+                active_sessions=active_managed_sessions,
+                default_session_basename=DEFAULT_SESSION_BASENAME
+            )
             SESSION_NAME = selector_app.run() # This will block until the app exits
             
             if SESSION_NAME is None:
