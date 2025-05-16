@@ -53,6 +53,10 @@ def select_pane(target_pane: str):
     """Selects the specified tmux pane."""
     _run_tmux_command(["select-pane", "-t", target_pane])
 
+def rename_session(old_session_name: str, new_session_name: str):
+    """Renames an existing tmux session."""
+    _run_tmux_command(["rename-session", "-t", old_session_name, new_session_name])
+
 def attach_session(session_name: str):
     """Replaces the current process with 'tmux attach-session'."""
     # FileNotFoundError will propagate from os.execvp if tmux is not found.

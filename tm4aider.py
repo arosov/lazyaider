@@ -85,18 +85,52 @@ if __name__ == "__main__":
                 active_sessions=active_managed_sessions,
                 default_session_basename=DEFAULT_SESSION_BASENAME
             )
-            SESSION_NAME = selector_app.run() # This will block until the app exits
+            SESSION_NAME_FROM_SELECTOR = selector_app.run() # This will block until the app exits
             
-            if SESSION_NAME is None:
+            if SESSION_NAME_FROM_SELECTOR is None:
                 print("Session selection cancelled. Exiting.")
                 sys.exit(0)
+
+            # Process any renames that occurred in the selector
+            if hasattr(selector_app, 'renamed_map') and selector_app.renamed_map:
+                print("Processing session renames...")
+                for original_name, new_name in selector_app.renamed_map.items():
+                    # Check if the original session still exists in tmux before trying to rename
+                    # This is important because the renamed_map tracks original names from the start of the dialog
+                    if tmux_utils.session_exists(original_name):
+                        try:
+                            print(f"  Renaming tmux session '{original_name}' to '{new_name}'...")
+                            tmux_utils.rename_session(original_name, new_name)
+                        except Exception as e:
+                            print(f"  Error renaming tmux session '{original_name}' to '{new_name}': {e}", file=sys.stderr)
+                            # Decide if we should exit or try to continue. For now, let's print and continue.
+                            # The config update below might lead to inconsistencies if tmux rename failed but config changes.
+                            # However, SessionNameValidator in RenameSessionScreen should prevent collision with other *managed* sessions.
+                            # This error would likely be due to collision with an *unmanaged* tmux session.
+                    else:
+                        # If original_name doesn't exist, it might have been the source of a rename chain
+                        # and the current new_name is its final form.
+                        # Or it was killed externally.
+                        print(f"  Original tmux session '{original_name}' not found. It might have been already renamed or killed.")
+
+                    # Update configuration: remove old name, add new name.
+                    # These functions handle loading and saving the config.
+                    config.remove_session_from_config(original_name) 
+                    config.add_session_to_config(new_name)
+                    print(f"  Updated configuration: removed '{original_name}', added '{new_name}'.")
             
-            if SESSION_NAME not in managed_sessions_from_config:
-                # This means a new session name was entered in the selector
-                print(f"New session '{SESSION_NAME}' will be created and added to config.")
-                config.add_session_to_config(SESSION_NAME)
+            SESSION_NAME = SESSION_NAME_FROM_SELECTOR # This is the final name to use
+
+            # Ensure the final SESSION_NAME (selected, created, or renamed) is in config.
+            # Re-load config.settings as it might have been modified by remove/add operations.
+            current_config_sessions = config.settings.get("managed_sessions", [])
+            if SESSION_NAME not in current_config_sessions:
+                # This case handles newly created sessions (not renames of existing config items,
+                # as those are handled above by adding the new_name).
+                print(f"Adding new session '{SESSION_NAME}' to configuration.")
+                config.add_session_to_config(SESSION_NAME) 
             else:
-                print(f"Using existing session: {SESSION_NAME}")
+                print(f"Using session '{SESSION_NAME}' (already in configuration or updated via rename).")
 
         else: # No active managed sessions found in config, or config is empty/new
             print("No active managed sessions found. Proposing a new default session.")
