@@ -21,7 +21,7 @@ class Sidebar(App):
     }
     #sidebar {
         width: 100%;
-         /*height: 100%; */
+        height: 100%;
         padding: 1;
         border-left: thick $primary-background-darken-2;
         background: $primary-background-lighten-1; /* Slightly different background for sidebar */
@@ -51,7 +51,7 @@ class Sidebar(App):
         margin: 0 0 0 0; /* Margin for button groups */
     }
     .plan_section_item_container {
-        height: auto; /* Ensure each item container wraps its content */
+        height: 100%; /* Ensure each item container wraps its content */
         margin-bottom: 1; /* Add some space between plan items */
     }
     .plan_action_button {
@@ -67,6 +67,7 @@ class Sidebar(App):
     #plan_collapsible > .collapsible-content {
         /* This is the Vertical widget that holds the Select and plan_sections_container. */
         /* Rely on default height for Vertical widget (auto) */
+        height: auto;
     }
     """
 
