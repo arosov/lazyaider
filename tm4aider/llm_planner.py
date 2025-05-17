@@ -6,7 +6,12 @@ from . import config # Use relative import for config within the same package
 from .prompt import PLAN_GENERATION_PROMPT_TEMPLATE as DEFAULT_PLAN_GENERATION_PROMPT_TEMPLATE # Import and alias
 from .aider_utils import get_aider_repo_map # Import the function to get the repo map
 
-def generate_plan(feature_description: str, session_name: str | None = None, repomap_method: str = "aider") -> tuple[str, str, int | None] | str:
+def generate_plan(
+    feature_description: str,
+    session_name: str | None = None,
+    repomap_method: str = "aider",
+    prompt_dump_file: str | None = None
+) -> tuple[str, str, int | None] | str:
     """
     Generates a development plan in Markdown format using an LLM.
     Uses session-specific prompt override if available, else global, else default.
@@ -129,6 +134,14 @@ def generate_plan(feature_description: str, session_name: str | None = None, rep
         print(error_message, file=sys.stderr)
         return f"# Error Generating Plan\n\n{error_message}"
 
+    if prompt_dump_file:
+        try:
+            with open(prompt_dump_file, "w", encoding="utf-8") as f:
+                f.write(prompt)
+            print(f"LLM prompt saved to: {prompt_dump_file}", file=sys.stderr)
+        except IOError as e:
+            print(f"Warning: Could not write prompt to {prompt_dump_file}: {e}", file=sys.stderr)
+            # Continue with plan generation even if prompt saving fails
 
     messages = [{"role": "user", "content": prompt}]
 
@@ -203,7 +216,10 @@ if __name__ == '__main__':
 
     # Test with no session (uses global or default prompt)
     print("Testing with no session context (global/default prompt):")
-    plan_data_global = generate_plan(sample_feature) # session_name is None by default
+    # Test dumping prompt
+    test_prompt_dump_file = "test_llm_prompt_dump.txt"
+    print(f"Dumping prompt to: {test_prompt_dump_file}")
+    plan_data_global = generate_plan(sample_feature, prompt_dump_file=test_prompt_dump_file) # session_name is None by default
 
     print("\n--- Generated Plan (Global/Default Prompt) ---")
     if isinstance(plan_data_global, tuple):

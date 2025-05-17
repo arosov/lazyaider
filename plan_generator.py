@@ -78,6 +78,11 @@ if __name__ == "__main__":
         type=str,
         help="Path to a text file containing the feature description for non-interactive plan generation."
     )
+    parser.add_argument(
+        "--dump-prompt",
+        type=str,
+        help="Path to a file where the LLM prompt should be saved. Only used in non-interactive mode."
+    )
     # TODO: Add --session-name argument if we want to specify session for non-interactive mode
     # For now, non-interactive mode will use global/default prompt settings from config.
 
@@ -100,7 +105,11 @@ if __name__ == "__main__":
 
         print(f"Generating plan non-interactively from: {args.plan_file}", file=sys.stderr)
         # In non-interactive mode, session_name is None, so global/default prompt is used.
-        plan_result = generate_plan(feature_description_cli, session_name=None)
+        plan_result = generate_plan(
+            feature_description_cli,
+            session_name=None,
+            prompt_dump_file=args.dump_prompt  # Pass the dump_prompt argument
+        )
 
         if isinstance(plan_result, tuple):
             plan_content_cli, model_name_cli, tokens_cli = plan_result
