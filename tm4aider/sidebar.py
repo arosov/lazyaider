@@ -17,11 +17,12 @@ class Sidebar(App):
         layout: vertical;
     }
     Horizontal#main_layout {
-        height: 1fr; /* Make Horizontal fill available vertical space between Header and Footer */
+        /*height: 1fr; /* Make Horizontal fill available vertical space between Header and Footer */
+        background: $primary-background-lighten-1; /* Slightly different background for sidebar */
     }
     #sidebar {
         width: 100%;
-        height: 100%;
+        height: auto;
         padding: 1;
         border-left: thick $primary-background-darken-2;
         background: $primary-background-lighten-1; /* Slightly different background for sidebar */
@@ -29,7 +30,7 @@ class Sidebar(App):
     /* .sidebar-title is removed as Collapsible provides its own title */
     #controls_collapsible Button { /* Style buttons inside the Controls Collapsible */
         width: 100%;
-        margin-bottom: 1;
+        margin-bottom: 0;
         margin-right: 4;
     }
     #sel_load_plan {
@@ -39,7 +40,6 @@ class Sidebar(App):
         padding: 1 0; /* Add some padding around the sections */
         /* Rely on default height for Vertical widget (auto) */
         align-vertical: top; /* Align children (labels, button rows) to the top */
-        overflow_y: auto;
     }
     #plan_sections_container Label {
         margin: 0 0 0 0; /* Margin for section titles */
@@ -47,11 +47,11 @@ class Sidebar(App):
         width: 100%; /* Ensure label wraps within its container */
     }
     #plan_sections_container Horizontal {
-        align: left middle;
+        align: left top;
         margin: 0 0 0 0; /* Margin for button groups */
     }
     .plan_section_item_container {
-        height: 100%; /* Ensure each item container wraps its content */
+        align: left top;
         margin-bottom: 1; /* Add some space between plan items */
     }
     .plan_action_button {
@@ -60,14 +60,12 @@ class Sidebar(App):
         padding: 0 0; /* Reduce inner padding: 0 for top/bottom, 1 for left/right */
     }
     #plan_collapsible {
-        /* Rely on default height behavior for Collapsible widget. */
-        /* When expanded, its height should be determined by its content. */
-        align-vertical: top; /* Align children (Select, plan_sections_container) to the top */
+        align: left top;
+        overflow_y: auto;
     }
     #plan_collapsible > .collapsible-content {
-        /* This is the Vertical widget that holds the Select and plan_sections_container. */
-        /* Rely on default height for Vertical widget (auto) */
-        height: auto;
+        align: left top;
+        height: 100%;
     }
     """
 
