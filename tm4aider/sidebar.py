@@ -102,12 +102,16 @@ class Sidebar(App):
             self.theme = theme_name_from_config
         # App.on_mount() is an empty async method, so no explicit super call is strictly needed here.
 
-        # Plan loading select state
+        await self._refresh_plan_list()
+
+    async def _refresh_plan_list(self) -> None:
+        """Refreshes the list of available plans in the Select widget."""
         load_plan_select = self.query_one("#sel_load_plan", Select)
-        # These names are based on conventions seen in plan_generator.py summary
+        # Store current value to attempt re-selection if Select.BLANK is not the value
+        previous_selected_value = load_plan_select.value if load_plan_select.value is not Select.BLANK else None
+
         tm4aider_dir_name = ".tm4aider"
         plans_subdir_name = "plans"
-        # Assuming .tm4aider directory is in the current working directory or a resolvable relative path.
         plans_base_path = Path(tm4aider_dir_name) / plans_subdir_name
 
         plan_options = []
@@ -120,33 +124,49 @@ class Sidebar(App):
             load_plan_select.set_options(plan_options)
             load_plan_select.disabled = False
             load_plan_select.prompt = "Select a plan..."
-            self.log(f"Plan directories found in {plans_base_path}. 'Load plan' select enabled with {len(plan_options)} options.")
-        else:
-            load_plan_select.set_options([]) # Clear any existing options
-            load_plan_select.disabled = True
-            load_plan_select.prompt = "No plans available"
-            self.log(f"No plan directories found in {plans_base_path}. 'Load plan' select disabled.")
+            load_plan_select.refresh() # Explicitly refresh the widget
+            self.log(f"Refreshed plan list. Found {len(plan_options)} options in {plans_base_path}.")
 
-        # Attempt to pre-select plan from config if options are available
-        if not load_plan_select.disabled and self.TMUX_SESSION_NAME:
-            from tm4aider import config as app_config_module # Ensure import
-            active_plan_name_from_config = app_config_module.settings.get(app_config_module.KEY_MANAGED_SESSIONS, {})\
-                .get(self.TMUX_SESSION_NAME, {})\
-                .get(app_config_module.KEY_SESSION_ACTIVE_PLAN_NAME)
+            available_plan_values = [val for _, val in plan_options]
+            restored_selection = False
 
-            if active_plan_name_from_config:
-                # Check if this plan name is actually in the available options
-                # plan_options is a list of (text, value) tuples
-                available_plan_values = [val for _, val in plan_options]
-                if active_plan_name_from_config in available_plan_values:
+            # Try to restore previously selected value if still valid
+            if previous_selected_value and previous_selected_value in available_plan_values:
+                load_plan_select.value = previous_selected_value
+                self.log(f"Restored previously selected plan '{previous_selected_value}'.")
+                restored_selection = True
+            # If not restored from previous, try config (only if TMUX_SESSION_NAME is set)
+            elif self.TMUX_SESSION_NAME:
+                from tm4aider import config as app_config_module # Ensure import
+                active_plan_name_from_config = app_config_module.settings.get(app_config_module.KEY_MANAGED_SESSIONS, {})\
+                    .get(self.TMUX_SESSION_NAME, {})\
+                    .get(app_config_module.KEY_SESSION_ACTIVE_PLAN_NAME)
+
+                if active_plan_name_from_config and active_plan_name_from_config in available_plan_values:
                     load_plan_select.value = active_plan_name_from_config
                     self.log(f"Pre-selected plan '{active_plan_name_from_config}' for session '{self.TMUX_SESSION_NAME}' from config.")
-                    # Setting .value should trigger on_select_changed if the value changes from BLANK
-                else:
+                    restored_selection = True
+                elif active_plan_name_from_config: # Configured plan not found
                     self.log.warning(f"Plan '{active_plan_name_from_config}' from config for session '{self.TMUX_SESSION_NAME}' not found in available plans. Ignoring.")
-        elif not load_plan_select.disabled and not self.TMUX_SESSION_NAME:
-             self.log.warning("TMUX_SESSION_NAME not set. Cannot pre-select plan from config.")
+            
+            if not restored_selection and load_plan_select.value is not Select.BLANK and previous_selected_value not in available_plan_values:
+                # If a previous selection existed but is no longer valid, and no other selection was made,
+                # explicitly set to BLANK to trigger on_select_changed for clearing.
+                load_plan_select.value = Select.BLANK
 
+
+        else: # No plan_options
+            current_value_before_clear = load_plan_select.value
+            load_plan_select.set_options([])
+            load_plan_select.disabled = True
+            load_plan_select.prompt = "No plans available"
+            load_plan_select.refresh() # Explicitly refresh the widget
+            self.log(f"No plan directories found in {plans_base_path}. 'Load plan' select disabled.")
+            
+            if current_value_before_clear is not Select.BLANK:
+                # If a plan was selected, and now there are no plans, its value will become BLANK.
+                # Setting .value to BLANK explicitly ensures on_select_changed is triggered.
+                load_plan_select.value = Select.BLANK
 
     def watch_theme(self, old_theme: str | None, new_theme: str | None) -> None:
         """Saves the theme when it changes."""
@@ -171,6 +191,7 @@ class Sidebar(App):
                 with Collapsible(title="Controls", collapsed=False, id="controls_collapsible"):
                     yield Button("Start Aider", id="btn_start_aider", variant="success")
                     yield Button("Generate plan", id="btn_generate_plan") # Default variant
+                    yield Button("Refresh plans", id="btn_refresh_plans") # New button
                     yield Button("Detach Session", id="btn_detach_session", variant="primary")
                     yield Button("Destroy Session", id="btn_quit_session", variant="error")
                 with Collapsible(title="Plan", collapsed=True, id="plan_collapsible"): # New section for Plan
@@ -343,6 +364,9 @@ class Sidebar(App):
             except Exception as e:
                 self.log.error(f"An unexpected error occurred while managing plan generator window: {e}")
 
+        elif button_id == "btn_refresh_plans":
+            self.log.info("Refresh plans button pressed. Refreshing plan list.")
+            await self._refresh_plan_list()
 
         elif button_id and button_id.startswith("plan_sec_"):
             # Example ID: "plan_sec_0_ask"
