@@ -267,7 +267,7 @@ class SessionSelectorApp(App[str | None]):
         """Called when app is mounted."""
         # Apply theme from config when app is mounted
         from tm4aider import config as app_config_module
-        theme_name_from_config = app_config_module.settings.get("theme_name", app_config_module.DEFAULT_THEME_NAME)
+        theme_name_from_config = app_config_module.settings.get(app_config_module.KEY_THEME_NAME, app_config_module.DEFAULT_THEME_NAME)
         if theme_name_from_config == "dark":
             self.dark = True
         elif theme_name_from_config == "light":

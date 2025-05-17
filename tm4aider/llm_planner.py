@@ -19,8 +19,8 @@ def generate_plan(feature_description: str) -> str:
     # Ensure config is loaded. `config.settings` should be available.
     # If config.py hasn't set up `DEFAULT_LLM_MODEL` or if it's missing,
     # litellm might default or error. It's better to ensure a default here too.
-    model_from_config = config.settings.get("llm_model")
-    api_key_from_config = config.settings.get("llm_api_key")
+    model_from_config = config.settings.get(config.KEY_LLM_MODEL)
+    api_key_from_config = config.settings.get(config.KEY_LLM_API_KEY)
 
     if not model_from_config:
         # Fallback if 'llm_model' is not in config or is empty.
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     # The generate_plan function itself will print warnings if keys are missing for common models.
 
     # A default model for testing if config isn't fully set up or accessible here
-    test_model_name = config.settings.get("llm_model") if 'config' in globals() and hasattr(config, 'settings') else "gpt-3.5-turbo"
+    test_model_name = config.settings.get(config.KEY_LLM_MODEL) if 'config' in globals() and hasattr(config, 'settings') else "gpt-3.5-turbo"
 
     print(f"Using model: {test_model_name} (from config or default for test)")
 

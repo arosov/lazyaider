@@ -105,7 +105,7 @@ if __name__ == "__main__":
 
         # Original tmux session management logic starts here (now unreachable)
         # This code will only be reached if FeatureInputApp returns None (no plan generated/saved)
-        managed_sessions_from_config = config.settings.get("managed_sessions", [])
+        managed_sessions_from_config = config.settings.get(config.KEY_MANAGED_SESSIONS, [])
         active_managed_sessions = [
             s_name for s_name in managed_sessions_from_config if tmux_utils.session_exists(s_name)
         ]

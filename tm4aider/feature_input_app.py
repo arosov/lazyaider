@@ -92,7 +92,7 @@ class FeatureInputApp(App[str | None]):
     async def on_mount(self) -> None:
         """Apply theme and focus the input widget on mount."""
         # Apply theme from config when app is mounted
-        theme_name_from_config = config.settings.get("theme_name", config.DEFAULT_THEME_NAME)
+        theme_name_from_config = config.settings.get(config.KEY_THEME_NAME, config.DEFAULT_THEME_NAME)
         if theme_name_from_config == "dark":
             self.dark = True
         elif theme_name_from_config == "light":
@@ -165,7 +165,7 @@ class FeatureInputApp(App[str | None]):
             description_area.styles.border = None # This should make it revert to the CSS `border: round $primary;`
 
             # Get model name for display
-            current_model_name = config.settings.get("llm_model", "Unknown Model")
+            current_model_name = config.settings.get(config.KEY_LLM_MODEL, "Unknown Model")
             loading_text_widget = self.query_one("#loading_subtext", Static)
             # Initial message, timer will update it with elapsed time
             loading_text_widget.update(f"Generating plan with {current_model_name}, please wait...")
@@ -256,7 +256,7 @@ class FeatureInputApp(App[str | None]):
         """Periodically updates the loading subtext with elapsed time."""
         if self._llm_call_start_time is not None and self.current_ui_state == self.STATE_LOADING_PLAN: # Use renamed variable
             elapsed_time = time.monotonic() - self._llm_call_start_time # Use renamed variable
-            current_model_name = config.settings.get("llm_model", "Unknown Model")
+            current_model_name = config.settings.get(config.KEY_LLM_MODEL, "Unknown Model")
             loading_text_widget = self.query_one("#loading_subtext", Static)
             loading_text_widget.update(f"Generating plan with {current_model_name}, please wait... (Elapsed: {elapsed_time:.1f}s)")
 
