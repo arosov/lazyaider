@@ -1,4 +1,5 @@
 import subprocess # Still needed for CalledProcessError
+from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, VerticalScroll
 from textual.widgets import Button, Footer, Header, Static, Collapsible
@@ -54,6 +55,26 @@ class Sidebar(App):
             self.theme = theme_name_from_config
         # App.on_mount() is an empty async method, so no explicit super call is strictly needed here.
 
+        # Plan loading button state
+        load_plan_button = self.query_one("#btn_load_plan", Button)
+        # These names are based on conventions seen in plan_generator.py summary
+        tm4aider_dir_name = ".tm4aider"
+        plans_subdir_name = "plans"
+        # Assuming .tm4aider directory is in the current working directory or a resolvable relative path.
+        plans_base_path = Path(tm4aider_dir_name) / plans_subdir_name
+
+        plan_directories_exist = False
+        if plans_base_path.is_dir():
+            # Check for any subdirectories within the plans_base_path
+            if any(item.is_dir() for item in plans_base_path.iterdir()):
+                plan_directories_exist = True
+        
+        load_plan_button.disabled = not plan_directories_exist
+        if load_plan_button.disabled:
+            self.log(f"No plan directories found in {plans_base_path}. 'Load plan' button disabled.")
+        else:
+            self.log(f"Plan directories found in {plans_base_path}. 'Load plan' button enabled.")
+
     def watch_theme(self, old_theme: str | None, new_theme: str | None) -> None:
         """Saves the theme when it changes."""
         if new_theme is not None:
@@ -78,6 +99,8 @@ class Sidebar(App):
                     yield Button("Start Aider", id="btn_start_aider", variant="success")
                     yield Button("Detach Session", id="btn_detach_session", variant="primary")
                     yield Button("Destroy Session", id="btn_quit_session", variant="error")
+                with Collapsible(title="Plan", collapsed=True): # New section for Plan
+                    yield Button("Load plan", id="btn_load_plan") 
         yield Footer()
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -117,6 +140,12 @@ class Sidebar(App):
             else:
                 self.log.warning("TMUX_SESSION_NAME is not set. Cannot detach session.")
 
+        elif button_id == "btn_load_plan":
+            if not event.button.disabled:
+                self.log("Load plan button pressed. Actual plan loading not yet implemented.")
+                # Future: Implement logic to show a list of plans and handle selection.
+            else:
+                self.log("Load plan button pressed, but it is disabled.")
 
         elif button_id == "btn_quit_session":
             await self.action_custom_quit()
