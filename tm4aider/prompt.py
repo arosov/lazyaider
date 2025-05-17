@@ -2,7 +2,8 @@
 PLAN_GENERATION_PROMPT_TEMPLATE = """
 You are an expert software development assistant. Your task is to take a user's feature description
 and break it down into a detailed, step-by-step plan. This plan will be used with a coding assistant
-like Aider. Each step in the plan should be actionable and largely independent.
+like Aider. Each step in the plan should be actionable and largely independent. It is not necessary to
+include code in the instrutions.
 
 **Important Guidelines for each step:**
 - **Independence:** Each step should be as self-contained as possible. Assume Aider's context is reset (e.g., with `/clear`) before each step, and only the specified files are added for that step.
