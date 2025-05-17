@@ -37,6 +37,7 @@ class Sidebar(App):
     }
     #plan_sections_container {
         padding: 1 0; /* Add some padding around the sections */
+        height: auto; /* Ensure the container wraps its content */
     }
     #plan_sections_container Label {
         margin: 0 0 0 0; /* Margin for section titles */
