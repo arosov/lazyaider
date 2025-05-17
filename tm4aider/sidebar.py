@@ -50,6 +50,10 @@ class Sidebar(App):
         align: left middle;
         margin: 0 0 0 0; /* Margin for button groups */
     }
+    .plan_section_item_container {
+        height: auto; /* Ensure each item container wraps its content */
+        margin-bottom: 1; /* Add some space between plan items */
+    }
     .plan_action_button {
         margin-right: 0; /* Space between action buttons */
         min-width: 6; /* Removed as auto width is desired */
@@ -508,17 +512,22 @@ class Sidebar(App):
 
                     for i, title in enumerate(section_titles):
                         section_label = Label(f"{title.strip()}")
-
                         buttons_container = Horizontal()
                         ask_button = Button("ask", id=f"plan_sec_{i}_ask", classes="plan_action_button")
                         code_button = Button("code", id=f"plan_sec_{i}_code", classes="plan_action_button")
                         arch_button = Button("arch", id=f"plan_sec_{i}_arch", classes="plan_action_button")
 
-                        # First, mount the containers for the section
-                        await plan_sections_container.mount(section_label)
-                        await plan_sections_container.mount(buttons_container)
-                        # Now that buttons_container is mounted, mount its children
+                        # Create a Vertical container for this specific section item
+                        section_item_container = Vertical(classes="plan_section_item_container")
+
+                        # Mount the label and buttons container into this new item container
+                        await section_item_container.mount(section_label)
+                        await section_item_container.mount(buttons_container)
+                        # Mount the buttons into their container
                         await buttons_container.mount_all([ask_button, code_button, arch_button])
+
+                        # Mount the item container into the main plan sections container
+                        await plan_sections_container.mount(section_item_container)
 
                     self.log(f"Displayed {len(section_titles)} sections for plan '{self.current_selected_plan_name}'.")
 
