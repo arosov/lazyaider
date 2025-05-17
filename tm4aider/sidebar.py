@@ -324,7 +324,7 @@ class Sidebar(App):
                     debug_dir.mkdir(parents=True, exist_ok=True)
                     plan_name_for_file = self.current_selected_plan_name or "unknown_plan"
                     base_filename = f"plan_{plan_name_for_file}_sec_{section_index}_{action_type}"
-                    
+
                     files_debug_path = debug_dir / f"{base_filename}_files.md"
                     goals_debug_path = debug_dir / f"{base_filename}_goals.txt"
                     instructions_debug_path = debug_dir / f"{base_filename}_instructions.txt"
@@ -417,8 +417,8 @@ class Sidebar(App):
                     full_prompt_parts.append(stripped_goals)
                 if stripped_instructions:
                     full_prompt_parts.append(stripped_instructions)
-                
-                full_prompt_content = "\n\n".join(full_prompt_parts)
+
+                full_prompt_content = "\n".join(full_prompt_parts)
                 self.log(f"DIAGNOSTIC: full_prompt_parts: {repr(full_prompt_parts)}")
                 self.log(f"DIAGNOSTIC: full_prompt_content before sending: {repr(full_prompt_content)}")
 
@@ -434,14 +434,16 @@ class Sidebar(App):
                     # Send the command prefix and the first line of the combined prompt
                     first_prompt_line = prompt_lines[0]
                     tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f"{aider_command_prefix}{first_prompt_line}")
+                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "M-Enter") # Alt+Enter for newline in prompt
                     self.log(f"Sent to Aider (first prompt line): {aider_command_prefix.strip()} {first_prompt_line[:50]}...")
 
                     # Send subsequent prompt lines with M-Enter
                     for i, line in enumerate(prompt_lines[1:]):
-                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "M-Enter") # Alt+Enter for newline in prompt
-                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, line)
+                        if line.strip():
+                            tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "M-Enter") # Alt+Enter for newline in prompt
+                            tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f" {line}")
                         self.log(f"Sent to Aider (prompt line {i+2}): {line[:50]}...")
-                    
+
                     # Finally, send Enter to submit the whole command
                     tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter")
                     self.log(f"Submitted multi-line command to Aider for section {section_index} ({action_type}) using combined goals and instructions.")
