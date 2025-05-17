@@ -21,7 +21,7 @@ class Sidebar(App):
     }
     #sidebar {
         width: 100%;
-        height: 100%; /* Fill height of parent Horizontal */
+         /*height: 100%; */
         padding: 1;
         border-left: thick $primary-background-darken-2;
         background: $primary-background-lighten-1; /* Slightly different background for sidebar */
@@ -37,7 +37,6 @@ class Sidebar(App):
     }
     #plan_sections_container {
         padding: 1 0; /* Add some padding around the sections */
-        height: auto; /* Ensure the container wraps its content */
     }
     #plan_sections_container Label {
         margin: 0 0 0 0; /* Margin for section titles */
@@ -54,11 +53,11 @@ class Sidebar(App):
         padding: 0 0; /* Reduce inner padding: 0 for top/bottom, 1 for left/right */
     }
     #plan_collapsible {
-        height: auto; /* Ensure the Collapsible itself wraps its content. */
+        height: auto;
     }
     #plan_collapsible > .collapsible-content {
         /* This is the Vertical widget that holds the Select and plan_sections_container. */
-        height: auto; /* Ensure this internal part also wraps its children. */
+        /* height: 100%; */
     }
     """
 
@@ -330,7 +329,7 @@ class Sidebar(App):
                     debug_dir.mkdir(parents=True, exist_ok=True)
                     plan_name_for_file = self.current_selected_plan_name or "unknown_plan"
                     base_filename = f"plan_{plan_name_for_file}_sec_{section_index}_{action_type}"
-                    
+
                     files_debug_path = debug_dir / f"{base_filename}_files.md"
                     goals_debug_path = debug_dir / f"{base_filename}_goals.txt"
                     instructions_debug_path = debug_dir / f"{base_filename}_instructions.txt"
@@ -420,7 +419,7 @@ class Sidebar(App):
                     full_prompt_parts.append(stripped_goals)
                 if stripped_instructions:
                     full_prompt_parts.append(stripped_instructions)
-                
+
                 full_prompt_content = "\n\n".join(full_prompt_parts)
 
                 try:
@@ -443,7 +442,7 @@ class Sidebar(App):
                             tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "M-Enter") # Alt+Enter for newline in prompt
                             tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f" {line}")
                         self.log(f"Sent to Aider (prompt line {i+2}): {line[:50]}...")
-                    
+
                     # Finally, send Enter to submit the whole command
                     tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter")
                     self.log(f"Submitted multi-line command to Aider for section {section_index} ({action_type}) using combined goals and instructions.")
