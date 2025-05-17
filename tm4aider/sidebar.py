@@ -27,6 +27,7 @@ class Sidebar(App):
     #sidebar Collapsible Button { /* Style buttons inside Collapsible within #sidebar */
         width: 100%;
         margin-bottom: 1;
+        margin-right: 4;
     }
     """
 
