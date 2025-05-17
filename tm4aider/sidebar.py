@@ -170,6 +170,7 @@ class Sidebar(App):
             with VerticalScroll(id="sidebar"):
                 with Collapsible(title="Controls", collapsed=False, id="controls_collapsible"):
                     yield Button("Start Aider", id="btn_start_aider", variant="success")
+                    yield Button("Generate plan", id="btn_generate_plan") # Default variant
                     yield Button("Detach Session", id="btn_detach_session", variant="primary")
                     yield Button("Destroy Session", id="btn_quit_session", variant="error")
                 with Collapsible(title="Plan", collapsed=True, id="plan_collapsible"): # New section for Plan
@@ -308,6 +309,71 @@ class Sidebar(App):
 
         elif button_id == "btn_quit_session":
             await self.action_custom_quit()
+
+        elif button_id == "btn_generate_plan":
+            if not self.TMUX_SESSION_NAME:
+                self.log.warning("TMUX_SESSION_NAME is not set. Cannot manage plan generator window.")
+                return
+
+            plan_generator_window_name = "tm4aider-plan-gen"
+            command_to_run = "python -m tm4aider.plan_generator"
+            target_pane = f"{self.TMUX_SESSION_NAME}:{plan_generator_window_name}.0" # Assuming pane 0
+
+            try:
+                # Try to select the window to see if it exists
+                select_cmd_args = ["select-window", "-t", f"{self.TMUX_SESSION_NAME}:{plan_generator_window_name}"]
+                # Use _run_tmux_command directly, assuming it's available via tmux_utils
+                # We need to import/access _run_tmux_command or have a helper in tmux_utils
+                # For now, let's assume tmux_utils has what we need or we use it carefully.
+                # The summary of tmux_utils shows _run_tmux_command.
+                
+                # We need to ensure that the current Textual app (Sidebar) does not exit or hang
+                # if the tmux command fails in a way that _run_tmux_command(check=False) handles.
+                # The goal is to check existence without crashing the sidebar.
+                
+                # Check if window exists by trying to list it and see if we get output
+                # A more robust way than just trying to select and catching failure,
+                # as select might have side effects or its failure modes complex.
+                # However, a simple select attempt is often used.
+                # Let's try to select; if it fails (non-zero return), create.
+                
+                # We need to ensure that the current Textual app (Sidebar) does not exit or hang
+                # if the tmux command fails in a way that _run_tmux_command(check=False) handles.
+                # The goal is to check existence without crashing the sidebar.
+                
+                # Attempt to select the window. If this command succeeds, the window exists.
+                # We run with check=False to handle the case where it doesn't exist.
+                select_result = tmux_utils._run_tmux_command(
+                    ["select-window", "-t", target_pane.split('.')[0]], # target window
+                    check=False, 
+                    capture_output=True # To suppress output to sidebar's terminal
+                )
+
+                if select_result.returncode == 0:
+                    self.log.info(f"Window '{plan_generator_window_name}' exists. Selecting and running command.")
+                    # Window exists, make sure it's selected (it should be already by select-window)
+                    # Then send keys to its first pane.
+                    tmux_utils.send_keys_to_pane(target_pane, command_to_run)
+                    tmux_utils.send_keys_to_pane(target_pane, "Enter")
+                    # Optionally, switch client to this window if not already focused
+                    # tmux select-window is usually sufficient if client is attached to this session
+                else:
+                    self.log.info(f"Window '{plan_generator_window_name}' does not exist. Creating new window and running command.")
+                    # Window does not exist, create it and run the command
+                    # new-window command will also switch focus to it.
+                    tmux_utils._run_tmux_command(
+                        ["new-window", "-n", plan_generator_window_name, "-t", f"{self.TMUX_SESSION_NAME}:", command_to_run]
+                    )
+                self.log.info(f"Successfully initiated plan generator in window '{plan_generator_window_name}'.")
+
+            except FileNotFoundError:
+                self.log.error("Error: tmux command not found. Is tmux installed and in PATH?")
+            except subprocess.CalledProcessError as e:
+                # This might be caught if check=True was used somewhere unexpectedly, or if a command truly fails.
+                self.log.error(f"Error managing tmux window for plan generator: {e.stderr.decode() if e.stderr else e}")
+            except Exception as e:
+                self.log.error(f"An unexpected error occurred while managing plan generator window: {e}")
+
 
         elif button_id and button_id.startswith("plan_sec_"):
             # Example ID: "plan_sec_0_ask"
