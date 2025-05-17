@@ -209,15 +209,16 @@ class Sidebar(App):
                 plans_subdir_name = "plans"
                 plan_dir_path = Path(tm4aider_dir_name) / plans_subdir_name / selected_plan_name
 
-                markdown_files = list(plan_dir_path.glob("*.md"))
-                if not markdown_files:
-                    self.log.error(f"No markdown file found in plan directory: {plan_dir_path}")
-                    # Mount a message indicating no file found
-                    await plan_sections_container.mount(Label(f"No .md file found in '{selected_plan_name}'."))
-                    return
+                # Construct the expected markdown file name based on the plan directory name
+                expected_markdown_filename = f"{selected_plan_name}.md"
+                markdown_file_path = plan_dir_path / expected_markdown_filename
 
-                # Assuming the first .md file found is the correct one
-                markdown_file_path = markdown_files[0]
+                if not markdown_file_path.is_file():
+                    self.log.error(f"Markdown file not found: {markdown_file_path}")
+                    # Mount a message indicating the specific file was not found
+                    await plan_sections_container.mount(Label(f"File '{expected_markdown_filename}' not found in '{selected_plan_name}'."))
+                    return
+                
                 self.log(f"Loading plan from: {markdown_file_path}")
 
                 try:
