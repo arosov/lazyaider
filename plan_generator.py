@@ -3,6 +3,10 @@ import os
 import re
 from tm4aider.feature_input_app import FeatureInputApp
 
+# Define global constants for directory names
+TM4AIDER_DIR_NAME = ".tm4aider"
+PLANS_SUBDIR_NAME = "plans"
+
 def _extract_plan_title(markdown_content: str) -> str:
     """Extracts the plan title from the first H1 header in markdown."""
     lines = markdown_content.splitlines()
@@ -44,7 +48,7 @@ if __name__ == "__main__":
         plan_title = _extract_plan_title(plan_content)
         sanitized_title = _sanitize_for_path(plan_title)
 
-        plan_dir = os.path.join(".tm4aider", "plans", sanitized_title)
+        plan_dir = os.path.join(TM4AIDER_DIR_NAME, PLANS_SUBDIR_NAME, sanitized_title)
         
         try:
             os.makedirs(plan_dir, exist_ok=True)

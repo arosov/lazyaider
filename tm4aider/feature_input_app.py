@@ -297,6 +297,10 @@ if __name__ == "__main__":
     # It will create/update a CSS file in the expected location relative to this script.
     import os
 
+    # Define constants for directory names for testing purposes
+    TM4AIDER_DIR_NAME_TEST = ".tm4aider"
+    PLANS_SUBDIR_NAME_TEST = "plans"
+
     # Helper functions for plan saving (mirrored from plan_generator.py for test purposes)
     def _extract_plan_title_for_test(markdown_content: str) -> str:
         """Extracts the plan title from the first H1 header in markdown."""
@@ -379,8 +383,8 @@ if __name__ == "__main__":
         # If this script is run from tm4aider/, .tm4aider/ will be created inside tm4aider/
         # A more robust approach for tests might use tempfile or ensure paths are absolute.
         # For now, using relative path as per original structure.
-        plan_dir_name = ".tm4aider" # Base directory for all tm4aider specific files
-        plans_subdir = "plans"      # Subdirectory for plans
+        plan_dir_name = TM4AIDER_DIR_NAME_TEST # Base directory for all tm4aider specific files
+        plans_subdir = PLANS_SUBDIR_NAME_TEST      # Subdirectory for plans
         
         # Construct path relative to where the script is run.
         # If script is run from project root, this will create .tm4aider/plans/etc.
