@@ -80,6 +80,7 @@ TextArea.-error-border {
 }
 
 #repomap_method_radioset {
+    width: auto; /* Make the RadioSet wrap its content */
     margin-right: 2; /* Space between RadioSet and the Generate Plan button */
     /* RadioSet arranges its RadioButtons vertically by default */
 }
