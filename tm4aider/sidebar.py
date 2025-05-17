@@ -2,7 +2,8 @@ import subprocess # Still needed for CalledProcessError
 from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, VerticalScroll
-from textual.widgets import Button, Footer, Header, Static, Collapsible
+from textual.widgets import Button, Footer, Header, Static, Collapsible, Select
+from textual.widgets.select import SelectOption # Explicit import for clarity
 from tm4aider import tmux_utils
 
 class Sidebar(App):
@@ -55,25 +56,30 @@ class Sidebar(App):
             self.theme = theme_name_from_config
         # App.on_mount() is an empty async method, so no explicit super call is strictly needed here.
 
-        # Plan loading button state
-        load_plan_button = self.query_one("#btn_load_plan", Button)
+        # Plan loading select state
+        load_plan_select = self.query_one("#sel_load_plan", Select)
         # These names are based on conventions seen in plan_generator.py summary
         tm4aider_dir_name = ".tm4aider"
         plans_subdir_name = "plans"
         # Assuming .tm4aider directory is in the current working directory or a resolvable relative path.
         plans_base_path = Path(tm4aider_dir_name) / plans_subdir_name
 
-        plan_directories_exist = False
+        plan_options = []
         if plans_base_path.is_dir():
-            # Check for any subdirectories within the plans_base_path
-            if any(item.is_dir() for item in plans_base_path.iterdir()):
-                plan_directories_exist = True
+            for item in sorted(plans_base_path.iterdir()): # Sort for consistent order
+                if item.is_dir():
+                    plan_options.append(SelectOption(item.name, item.name)) # Display name and value are the same
         
-        load_plan_button.disabled = not plan_directories_exist
-        if load_plan_button.disabled:
-            self.log(f"No plan directories found in {plans_base_path}. 'Load plan' button disabled.")
+        if plan_options:
+            load_plan_select.set_options(plan_options)
+            load_plan_select.disabled = False
+            load_plan_select.prompt = "Select a plan..."
+            self.log(f"Plan directories found in {plans_base_path}. 'Load plan' select enabled with {len(plan_options)} options.")
         else:
-            self.log(f"Plan directories found in {plans_base_path}. 'Load plan' button enabled.")
+            load_plan_select.set_options([]) # Clear any existing options
+            load_plan_select.disabled = True
+            load_plan_select.prompt = "No plans available"
+            self.log(f"No plan directories found in {plans_base_path}. 'Load plan' select disabled.")
 
     def watch_theme(self, old_theme: str | None, new_theme: str | None) -> None:
         """Saves the theme when it changes."""
@@ -100,7 +106,7 @@ class Sidebar(App):
                     yield Button("Detach Session", id="btn_detach_session", variant="primary")
                     yield Button("Destroy Session", id="btn_quit_session", variant="error")
                 with Collapsible(title="Plan", collapsed=True): # New section for Plan
-                    yield Button("Load plan", id="btn_load_plan") 
+                    yield Select([], id="sel_load_plan", prompt="Load plan...")
         yield Footer()
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -140,15 +146,22 @@ class Sidebar(App):
             else:
                 self.log.warning("TMUX_SESSION_NAME is not set. Cannot detach session.")
 
-        elif button_id == "btn_load_plan":
-            if not event.button.disabled:
-                self.log("Load plan button pressed. Actual plan loading not yet implemented.")
-                # Future: Implement logic to show a list of plans and handle selection.
-            else:
-                self.log("Load plan button pressed, but it is disabled.")
-
         elif button_id == "btn_quit_session":
             await self.action_custom_quit()
+
+    async def on_select_changed(self, event: Select.Changed) -> None:
+        """Handle select change events."""
+        if event.select.id == "sel_load_plan":
+            if event.value is not Select.BLANK:
+                selected_plan_name = str(event.value) # event.value could be NotSetType if prompt is reselected
+                self.log(f"Plan selected: {selected_plan_name}. Actual plan loading not yet implemented.")
+                # Future: Implement logic to load the selected plan.
+                # For now, we can reset the select to its prompt after selection if desired,
+                # or leave it showing the selected plan.
+                # event.select.value = Select.BLANK # To reset to prompt after selection
+            else:
+                self.log("Plan selection cleared (prompt reselected).")
+
 
     async def action_custom_quit(self, kill_session: bool = True) -> None:
         """Custom quit action that also attempts to kill the tmux session."""
