@@ -54,7 +54,13 @@ class Sidebar(App):
         padding: 0 0; /* Reduce inner padding: 0 for top/bottom, 1 for left/right */
     }
     #plan_collapsible {
-        height: auto; /* Ensure the collapsible itself wraps its content when expanded */
+        /* The Collapsible widget itself defaults to height: auto. */
+        /* Explicitly setting it might not be necessary or could interfere. */
+    }
+    #plan_collapsible > .collapsible-content {
+        /* Target the internal content container of our specific Collapsible. */
+        /* This container is typically a Vertical widget. */
+        height: auto; /* Ensure this internal part also wraps its children. */
     }
     """
 
