@@ -202,6 +202,12 @@ if __name__ == '__main__':
     # print(plan_data_global[0] if isinstance(plan_data_global, tuple) else plan_data_global) # Print content or error
     print("----------------------")
 
+    # Define 'plan' based on 'plan_data_global' for the following block
+    if isinstance(plan_data_global, tuple):
+        plan = plan_data_global[0]  # This is the plan content
+    else:
+        plan = plan_data_global  # This is the error string
+
     if not plan.startswith("# Error Generating Plan"):
         try:
             # Save to a test plan file in the current directory
