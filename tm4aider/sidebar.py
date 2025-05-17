@@ -141,10 +141,17 @@ class Sidebar(App):
         button_id = event.button.id
 
         if button_id == "btn_start_aider":
-            command_to_run = "aider"
+            aider_script_path = Path("aider.sh")
+            if aider_script_path.is_file() and aider_script_path.exists():
+                command_to_run = "./aider.sh"
+                self.log("Found aider.sh, using it to start Aider.")
+            else:
+                command_to_run = "aider"
+                self.log("aider.sh not found, using 'aider' command.")
+
             if self.TMUX_TARGET_PANE:
                 try:
-                    # Send the command string "aider"
+                    # Send the command string
                     tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, command_to_run, capture_output=True)
                     # Send the "Enter" key to execute the command
                     tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter", capture_output=True)
