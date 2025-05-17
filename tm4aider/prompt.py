@@ -33,6 +33,10 @@ The output MUST be a Markdown document with the following structure:
 
 ... (Repeat for as many steps as necessary) ...
 
+User's Repository map:
+---
+{repository_map}
+---
 
 User's Feature Description:
 ---
