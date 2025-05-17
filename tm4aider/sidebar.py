@@ -358,18 +358,34 @@ class Sidebar(App):
                 # This strongly implies: `/ask <content_here>`
                 # So, the content MUST be on one line or escaped.
                 # Let's replace newlines with a space for the prompt.
+                # New approach: send multi-line content using M-Enter
 
-                prompt_content = section_content.replace('\n', ' ')
-
-                full_aider_command = f"{aider_command_prefix}{prompt_content}"
+                lines = section_content.split('\n')
 
                 try:
-                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, full_aider_command)
+                    if not lines: # Should not happen if section_content is not None and stripped
+                        self.log.warning("Section content is empty after splitting, sending command prefix only.")
+                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, aider_command_prefix.strip()) # Send command like /ask
+                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter") # Submit
+                        return
+
+                    # Send the command prefix and the first line
+                    first_line_content = lines[0]
+                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f"{aider_command_prefix}{first_line_content}")
+                    self.log(f"Sent to Aider (first line): {aider_command_prefix}{first_line_content[:50]}...")
+
+                    # Send subsequent lines with M-Enter
+                    for i, line in enumerate(lines[1:]):
+                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "M-Enter") # Alt+Enter for newline in prompt
+                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, line)
+                        self.log(f"Sent to Aider (line {i+2}): {line[:50]}...")
+                    
+                    # Finally, send Enter to submit the whole command
                     tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter")
-                    self.log(f"Sent to Aider: {aider_command_prefix}...") # Log truncated for brevity
-                    self.log(f"Full command sent (first 100 chars): {full_aider_command[:100]}")
+                    self.log(f"Submitted multi-line command to Aider for section {section_index} ({action_type}).")
+
                 except Exception as e:
-                    self.log.error(f"Error sending section content to tmux: {e}")
+                    self.log.error(f"Error sending multi-line section content to tmux: {e}")
 
             except (IndexError, ValueError) as e:
                 self.log.error(f"Error parsing plan section button ID '{button_id}': {e}")
