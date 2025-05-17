@@ -41,6 +41,7 @@ class Sidebar(App):
     #plan_sections_container Label {
         margin: 1 0 0 1; /* Margin for section titles */
         text-style: italic;
+        width: 100%; /* Ensure label wraps within its container */
     }
     #plan_sections_container Horizontal {
         align: left middle;
