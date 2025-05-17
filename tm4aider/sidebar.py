@@ -37,7 +37,7 @@ class Sidebar(App):
     }
     #plan_sections_container Label {
         margin: 1 0 0 1; /* Margin for section titles */
-        font-style: italic;
+        text-style: italic;
     }
     #plan_sections_container Horizontal {
         align: left middle;
@@ -85,7 +85,7 @@ class Sidebar(App):
             for item in sorted(plans_base_path.iterdir()): # Sort for consistent order
                 if item.is_dir():
                     plan_options.append((item.name, item.name)) # Use a tuple (text, value)
-        
+
         if plan_options:
             load_plan_select.set_options(plan_options)
             load_plan_select.disabled = False
@@ -171,7 +171,7 @@ class Sidebar(App):
 
         elif button_id == "btn_quit_session":
             await self.action_custom_quit()
-        
+
         elif button_id and button_id.startswith("plan_sec_"):
             # Example ID: "plan_sec_0_ask"
             parts = button_id.split("_")
@@ -230,16 +230,16 @@ class Sidebar(App):
 
                     for i, title in enumerate(section_titles):
                         section_label = Label(f"Section: {title}")
-                        
+
                         buttons_container = Horizontal()
                         ask_button = Button("ask", id=f"plan_sec_{i}_ask", classes="plan_action_button")
                         code_button = Button("code", id=f"plan_sec_{i}_code", classes="plan_action_button")
                         arch_button = Button("arch", id=f"plan_sec_{i}_arch", classes="plan_action_button")
-                        
+
                         await buttons_container.mount_all([ask_button, code_button, arch_button])
                         await plan_sections_container.mount(section_label)
                         await plan_sections_container.mount(buttons_container)
-                    
+
                     self.log(f"Displayed {len(section_titles)} sections for plan '{selected_plan_name}'.")
 
                 except Exception as e:
