@@ -20,7 +20,7 @@ class Sidebar(App):
         height: 1fr; /* Make Horizontal fill available vertical space between Header and Footer */
     }
     #sidebar {
-        width: 100%; /* Sidebar takes 20% of the width */
+        width: 100%;
         height: 100%; /* Fill height of parent Horizontal */
         padding: 1;
         border-left: thick $primary-background-darken-2;
@@ -30,7 +30,7 @@ class Sidebar(App):
     #controls_collapsible Button { /* Style buttons inside the Controls Collapsible */
         width: 100%;
         margin-bottom: 1;
-        /* margin-right: 4; /* Removed as width 100% makes it less relevant for these buttons */
+        margin-right: 4;
     }
     #plan_sections_container {
         padding: 1 0; /* Add some padding around the sections */
@@ -44,9 +44,8 @@ class Sidebar(App):
         margin: 0 0 1 2; /* Margin for button groups */
     }
     .plan_action_button {
-        width: auto; /* Buttons take space based on their content */
         margin-right: 1; /* Space between action buttons */
-        /* min-width: 8; /* Removed as auto width is desired */
+        min-width: 8; /* Removed as auto width is desired */
     }
     """
 
