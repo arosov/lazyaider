@@ -2,7 +2,7 @@ import subprocess # Still needed for CalledProcessError
 import re # For parsing markdown sections
 from pathlib import Path
 from textual.app import App, ComposeResult
-from textual.containers import Horizontal, VerticalScroll, Vertical
+from textual.containers import Horizontal, VerticalScroll, Vertical, Grid
 from textual.widgets import Button, Footer, Header, Static, Collapsible, Select, Label
 # SelectOption import removed
 from tm4aider import tmux_utils
@@ -39,7 +39,9 @@ class Sidebar(App):
     #plan_sections_container {
         padding: 1 0; /* Add some padding around the sections */
         height: auto; /* Explicitly wrap content */
-        align-vertical: top; /* Align children (plan_section_item_container) to the top */
+        /* Grid properties for a single column layout where rows wrap content */
+        grid-size: 1; /* Defines one column */
+        grid-rows: auto; /* Each row takes the height of its content */
     }
     #plan_sections_container Label {
         margin: 0 0 0 0; /* Margin for section titles */
@@ -170,7 +172,7 @@ class Sidebar(App):
                     yield Button("Destroy Session", id="btn_quit_session", variant="error")
                 with Collapsible(title="Plan", collapsed=True, id="plan_collapsible"): # New section for Plan
                     yield Select([], id="sel_load_plan", prompt="Load plan...")
-                    yield Vertical(id="plan_sections_container") # Container for dynamic plan sections
+                    yield Grid(id="plan_sections_container") # Container for dynamic plan sections
         yield Footer()
 
     def _parse_markdown_sections(self, markdown_content: str) -> list[str]:
@@ -466,7 +468,7 @@ class Sidebar(App):
 
     async def on_select_changed(self, event: Select.Changed) -> None:
         """Handle select change events."""
-        plan_sections_container = self.query_one("#plan_sections_container", Vertical)
+        plan_sections_container = self.query_one("#plan_sections_container", Grid)
 
         if event.select.id == "sel_load_plan":
             # Clear previous sections first
