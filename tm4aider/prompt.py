@@ -20,6 +20,7 @@ The output MUST be a Markdown document with the following structure:
 - **Files to add to Aider:** List the specific file paths that should be added to Aider for this step (e.g., `/add path/to/file.py new_file.py`). Use a Markdown bullet list.
 
 - **Goal:** Briefly state the objective of this step.
+
 - **Instructions:** Provide clear, concise instructions for the LLM coding assistant (Aider) to implement this step. Be specific about the changes, functions, classes, or logic to be added or modified.
 
 ## 2: [Descriptive Title for Step 2]
