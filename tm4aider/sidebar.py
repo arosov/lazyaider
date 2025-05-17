@@ -237,9 +237,11 @@ class Sidebar(App):
                         code_button = Button("code", id=f"plan_sec_{i}_code", classes="plan_action_button")
                         arch_button = Button("arch", id=f"plan_sec_{i}_arch", classes="plan_action_button")
 
-                        await buttons_container.mount_all([ask_button, code_button, arch_button])
+                        # First, mount the containers for the section
                         await plan_sections_container.mount(section_label)
                         await plan_sections_container.mount(buttons_container)
+                        # Now that buttons_container is mounted, mount its children
+                        await buttons_container.mount_all([ask_button, code_button, arch_button])
 
                     self.log(f"Displayed {len(section_titles)} sections for plan '{selected_plan_name}'.")
 
