@@ -11,6 +11,7 @@ KEY_THEME_NAME = "theme_name"
 KEY_LLM_MODEL = "llm_model"
 KEY_LLM_API_KEY = "llm_api_key"
 KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH = "plan_generation_prompt_override_path" # Can be global or per-session
+KEY_SESSION_ACTIVE_PLAN_NAME = "active_plan_name" # Stores the active plan directory name for a session
 
 DEFAULT_SIDEPANE_PERCENT_WIDTH = 20
 DEFAULT_THEME_NAME = "light" # Textual's default theme
@@ -191,6 +192,26 @@ def update_theme_in_config(theme_name: str) -> None:
     if current_theme != theme_name:
         settings[KEY_THEME_NAME] = theme_name
         save_config(settings)
+
+def update_session_active_plan_name(session_name: str, plan_name: str | None) -> None:
+    """Updates the active plan name for a specific session in config and saves."""
+    if not session_name:
+        print("Warning: Attempted to update active plan for an unspecified session name.", file=sys.stderr)
+        return
+
+    managed_sessions = settings.setdefault(KEY_MANAGED_SESSIONS, {})
+    session_settings = managed_sessions.setdefault(session_name, {})
+
+    current_plan_name = session_settings.get(KEY_SESSION_ACTIVE_PLAN_NAME)
+
+    if current_plan_name != plan_name:
+        if plan_name is None:
+            if KEY_SESSION_ACTIVE_PLAN_NAME in session_settings:
+                del session_settings[KEY_SESSION_ACTIVE_PLAN_NAME]
+                save_config(settings)
+        else:
+            session_settings[KEY_SESSION_ACTIVE_PLAN_NAME] = plan_name
+            save_config(settings)
 
 def update_llm_model_in_config(model_name: str) -> None:
     """Updates the LLM model name in config and saves."""

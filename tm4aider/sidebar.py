@@ -100,6 +100,27 @@ class Sidebar(App):
             load_plan_select.disabled = True
             load_plan_select.prompt = "No plans available"
             self.log(f"No plan directories found in {plans_base_path}. 'Load plan' select disabled.")
+        
+        # Attempt to pre-select plan from config if options are available
+        if not load_plan_select.disabled and self.TMUX_SESSION_NAME:
+            from tm4aider import config as app_config_module # Ensure import
+            active_plan_name_from_config = app_config_module.settings.get(app_config_module.KEY_MANAGED_SESSIONS, {})\
+                .get(self.TMUX_SESSION_NAME, {})\
+                .get(app_config_module.KEY_SESSION_ACTIVE_PLAN_NAME)
+
+            if active_plan_name_from_config:
+                # Check if this plan name is actually in the available options
+                # plan_options is a list of (text, value) tuples
+                available_plan_values = [val for _, val in plan_options]
+                if active_plan_name_from_config in available_plan_values:
+                    load_plan_select.value = active_plan_name_from_config
+                    self.log(f"Pre-selected plan '{active_plan_name_from_config}' for session '{self.TMUX_SESSION_NAME}' from config.")
+                    # Setting .value should trigger on_select_changed if the value changes from BLANK
+                else:
+                    self.log.warning(f"Plan '{active_plan_name_from_config}' from config for session '{self.TMUX_SESSION_NAME}' not found in available plans. Ignoring.")
+        elif not load_plan_select.disabled and not self.TMUX_SESSION_NAME:
+             self.log.warning("TMUX_SESSION_NAME not set. Cannot pre-select plan from config.")
+
 
     def watch_theme(self, old_theme: str | None, new_theme: str | None) -> None:
         """Saves the theme when it changes."""
@@ -216,6 +237,14 @@ class Sidebar(App):
                 selected_plan_name = str(event.value)
                 self.log(f"Plan selected: {selected_plan_name}.")
 
+                # Save selected plan to config
+                if self.TMUX_SESSION_NAME:
+                    from tm4aider import config as app_config_module # late import
+                    app_config_module.update_session_active_plan_name(self.TMUX_SESSION_NAME, selected_plan_name)
+                    self.log(f"Saved active plan '{selected_plan_name}' for session '{self.TMUX_SESSION_NAME}' to config.")
+                else:
+                    self.log.warning("TMUX_SESSION_NAME not set. Cannot save active plan to config.")
+
                 tm4aider_dir_name = ".tm4aider"
                 plans_subdir_name = "plans"
                 plan_dir_path = Path(tm4aider_dir_name) / plans_subdir_name / selected_plan_name
@@ -260,9 +289,17 @@ class Sidebar(App):
                     self.log.error(f"Error loading or parsing plan file {markdown_file_path}: {e}")
                     await plan_sections_container.mount(Label(f"Error loading plan: {e}"))
 
-            else:
+            else: # Plan selection cleared or event.value is None/BLANK
                 self.log("Plan selection cleared.")
                 # Children already cleared at the start of the handler
+
+                # Clear selected plan from config
+                if self.TMUX_SESSION_NAME:
+                    from tm4aider import config as app_config_module # late import
+                    app_config_module.update_session_active_plan_name(self.TMUX_SESSION_NAME, None)
+                    self.log(f"Cleared active plan for session '{self.TMUX_SESSION_NAME}' in config.")
+                else:
+                    self.log.warning("TMUX_SESSION_NAME not set. Cannot clear active plan from config.")
 
     async def action_custom_quit(self, kill_session: bool = True) -> None:
         """Custom quit action that also attempts to kill the tmux session."""
