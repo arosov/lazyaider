@@ -3,11 +3,13 @@ import subprocess
 def get_aider_repo_map() -> str:
     """
     Runs 'aider --show-repo-map' and captures its output,
-    returning only the content after the first newline.
+    returning only the content after the first empty line.
+    An empty line is defined as a line containing only whitespace characters (or no characters)
+    followed by a newline.
 
     If the command fails, it returns a string containing the error message.
-    If the command succeeds but there's no newline, or no content after 
-    the first newline, it returns an empty string.
+    If the command succeeds but no empty line is found, or if there's no content 
+    after the first empty line, it returns an empty string.
     """
     command = ["aider", "--show-repo-map"]
     try:
@@ -30,15 +32,30 @@ def get_aider_repo_map() -> str:
             return error_message.strip()
 
         stdout_content = result.stdout
-        first_newline_index = stdout_content.find('\n')
-
-        if first_newline_index == -1:
-            # No newline found, so there is no content "after" the first newline.
-            return ""
         
-        # Return the part of the string after the first newline character.
-        # If the newline is the last character, this will correctly return an empty string.
-        return stdout_content[first_newline_index + 1:]
+        lines = stdout_content.splitlines(True) # Keep newlines to preserve original structure
+        current_char_offset = 0
+        
+        for line_with_newline in lines:
+            # Content of the line, excluding its own trailing newline character(s)
+            line_content_stripped_of_newline = line_with_newline.rstrip('\r\n')
+            
+            # Calculate the starting position of the *next* line's content
+            offset_after_this_line = current_char_offset + len(line_with_newline)
+
+            # Check if the current line (when stripped of its own newline and then whitespace) is empty
+            if line_content_stripped_of_newline.strip() == "":
+                # This is an empty line. We want the content that starts *after* this entire line.
+                if offset_after_this_line >= len(stdout_content):
+                    # The empty line was the last part of the output, or output ends with it.
+                    # Thus, there is no content after it.
+                    return "" 
+                return stdout_content[offset_after_this_line:]
+            
+            current_char_offset = offset_after_this_line
+            
+        # No empty line was found in the output
+        return ""
 
     except FileNotFoundError:
         return f"Error: '{command[0]}' command not found. Please ensure Aider is installed and in your PATH."
@@ -55,8 +72,8 @@ if __name__ == '__main__':
         print("\n--- Error ---")
         print(repo_map_data)
     elif not repo_map_data:
-        print("\n--- Repo Map (or part after first line) ---")
-        print("No content found after the first line of 'aider --show-repo-map' output, or the output was empty after the first line.")
+        print("\n--- Repo Map (content after first empty line) ---")
+        print("No empty line found in 'aider --show-repo-map' output, or no content after it.")
     else:
         print("\n--- Repo Map (content after first line) ---")
         print(repo_map_data)
