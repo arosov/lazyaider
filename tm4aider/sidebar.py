@@ -38,8 +38,8 @@ class Sidebar(App):
     }
     #plan_sections_container {
         padding: 1 0; /* Add some padding around the sections */
-        /* Rely on default height for Vertical widget (auto) */
-        align-vertical: top; /* Align children (labels, button rows) to the top */
+        height: auto; /* Explicitly wrap content */
+        align-vertical: top; /* Align children (plan_section_item_container) to the top */
     }
     #plan_sections_container Label {
         margin: 0 0 0 0; /* Margin for section titles */
@@ -51,7 +51,8 @@ class Sidebar(App):
         margin: 0 0 0 0; /* Margin for button groups */
     }
     .plan_section_item_container {
-        align: left top;
+        height: auto; /* Explicitly wrap content (label + buttons horizontal) */
+        align: left top; /* Align label and buttons horizontal to the top-left */
         margin-bottom: 1; /* Add some space between plan items */
     }
     .plan_action_button {
