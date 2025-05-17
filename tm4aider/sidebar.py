@@ -39,16 +39,16 @@ class Sidebar(App):
         padding: 1 0; /* Add some padding around the sections */
     }
     #plan_sections_container Label {
-        margin: 1 0 0 1; /* Margin for section titles */
+        margin: 0 0 0 0; /* Margin for section titles */
         text-style: italic;
         width: 100%; /* Ensure label wraps within its container */
     }
     #plan_sections_container Horizontal {
         align: left middle;
-        margin: 0 0 1 2; /* Margin for button groups */
+        margin: 0 0 0 0; /* Margin for button groups */
     }
     .plan_action_button {
-        margin-right: 1; /* Space between action buttons */
+        margin-right: 0; /* Space between action buttons */
         min-width: 8; /* Removed as auto width is desired */
     }
     """
