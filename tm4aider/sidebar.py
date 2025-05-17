@@ -27,10 +27,10 @@ class Sidebar(App):
         background: $primary-background-lighten-1; /* Slightly different background for sidebar */
     }
     /* .sidebar-title is removed as Collapsible provides its own title */
-    #sidebar Collapsible Button { /* Style buttons inside Collapsible within #sidebar */
+    #controls_collapsible Button { /* Style buttons inside the Controls Collapsible */
         width: 100%;
         margin-bottom: 1;
-        margin-right: 4;
+        /* margin-right: 4; /* Removed as width 100% makes it less relevant for these buttons */
     }
     #plan_sections_container {
         padding: 1 0; /* Add some padding around the sections */
@@ -44,8 +44,9 @@ class Sidebar(App):
         margin: 0 0 1 2; /* Margin for button groups */
     }
     .plan_action_button {
+        width: auto; /* Buttons take space based on their content */
         margin-right: 1; /* Space between action buttons */
-        min-width: 8; /* Ensure buttons have a decent minimum width */
+        /* min-width: 8; /* Removed as auto width is desired */
     }
     """
 
@@ -117,7 +118,7 @@ class Sidebar(App):
         with Horizontal(id="main_layout"):
             # Terminal widget removed
             with VerticalScroll(id="sidebar"):
-                with Collapsible(title="Controls", collapsed=False):
+                with Collapsible(title="Controls", collapsed=False, id="controls_collapsible"):
                     yield Button("Start Aider", id="btn_start_aider", variant="success")
                     yield Button("Detach Session", id="btn_detach_session", variant="primary")
                     yield Button("Destroy Session", id="btn_quit_session", variant="error")
