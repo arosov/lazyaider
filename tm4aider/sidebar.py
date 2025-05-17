@@ -67,7 +67,7 @@ class Sidebar(App):
     }
     #plan_collapsible > .collapsible-content {
         align: left top; /* Aligns children (Select, plan_sections_container) to top-left */
-        /* Rely on default height behavior for this Vertical container (auto). */
+        height: auto; /* Explicitly set to wrap content */
     }
     """
 
