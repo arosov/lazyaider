@@ -74,10 +74,10 @@ def generate_plan(feature_description: str, session_name: str | None = None, rep
     # Get the repository map based on the selected method
     repository_map_content = ""
     if repomap_method == "repomix":
-        print("Fetching repository map using 'repomix --compact'...", file=sys.stderr)
+        print("Fetching repository map using 'repomix --compress --stdout'...", file=sys.stderr)
         try:
             process = subprocess.run(
-                ["repomix", "--compact"],
+                ["repomix", "--compress", "--stdout"],
                 capture_output=True,
                 text=True,
                 check=False, # Check manually to provide better error message
@@ -86,22 +86,22 @@ def generate_plan(feature_description: str, session_name: str | None = None, rep
             if process.returncode == 0:
                 repository_map_content = process.stdout.strip()
                 if not repository_map_content: # Handle empty output from repomix
-                    repository_map_content = "Error: 'repomix --compact' produced no output."
+                    repository_map_content = "Error: 'repomix --compress --stdout' produced no output."
                     print(f"Warning: {repository_map_content}", file=sys.stderr)
                 else:
                     print("Successfully fetched repository map with repomix.", file=sys.stderr)
             else:
                 error_output = process.stderr.strip() if process.stderr else "No stderr output."
-                repository_map_content = f"Error: 'repomix --compact' failed with return code {process.returncode}. Stderr: {error_output}"
+                repository_map_content = f"Error: 'repomix --compress --stdout' failed with return code {process.returncode}. Stderr: {error_output}"
                 print(f"Warning: {repository_map_content}", file=sys.stderr)
         except FileNotFoundError:
             repository_map_content = "Error: 'repomix' command not found. Please ensure it is installed and in your PATH."
             print(f"Warning: {repository_map_content}", file=sys.stderr)
         except subprocess.TimeoutExpired:
-            repository_map_content = "Error: 'repomix --compact' timed out after 60 seconds."
+            repository_map_content = "Error: 'repomix --compress --stdout' timed out after 60 seconds."
             print(f"Warning: {repository_map_content}", file=sys.stderr)
         except Exception as e:
-            repository_map_content = f"An unexpected error occurred while running 'repomix --compact': {type(e).__name__} - {e}"
+            repository_map_content = f"An unexpected error occurred while running 'repomix --compress --stdout': {type(e).__name__} - {e}"
             print(f"Warning: {repository_map_content}", file=sys.stderr)
     else: # Default to "aider" or if repomap_method is unknown
         if repomap_method != "aider":
