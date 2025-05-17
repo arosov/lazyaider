@@ -59,7 +59,7 @@ class Sidebar(App):
     }
     #plan_collapsible > .collapsible-content {
         /* This is the Vertical widget that holds the Select and plan_sections_container. */
-        /* Rely on default height behavior (auto) for this Vertical container. */
+        height: auto; /* Ensure this internal part wraps its children. */
     }
     """
 
