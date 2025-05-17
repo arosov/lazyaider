@@ -32,6 +32,9 @@ class Sidebar(App):
         margin-bottom: 1;
         margin-right: 4;
     }
+    #sel_load_plan {
+        margin-right: 4;
+    }
     #plan_sections_container {
         padding: 1 0; /* Add some padding around the sections */
     }
@@ -230,7 +233,7 @@ class Sidebar(App):
                         return
 
                     for i, title in enumerate(section_titles):
-                        section_label = Label(f"Section: {title}")
+                        section_label = Label(f"{title}")
 
                         buttons_container = Horizontal()
                         ask_button = Button("ask", id=f"plan_sec_{i}_ask", classes="plan_action_button")
