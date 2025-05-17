@@ -3,6 +3,7 @@ import os
 import sys
 from . import config # Use relative import for config within the same package
 from .prompt import PLAN_GENERATION_PROMPT_TEMPLATE as DEFAULT_PLAN_GENERATION_PROMPT_TEMPLATE # Import and alias
+from .aider_utils import get_aider_repo_map # Import the function to get the repo map
 
 def generate_plan(feature_description: str, session_name: str | None = None) -> tuple[str, str, int | None] | str:
     """
@@ -68,15 +69,29 @@ def generate_plan(feature_description: str, session_name: str | None = None) -> 
         except Exception as e:
             print(f"Warning: Could not load prompt template from {prompt_override_path}: {e}. Using default template.", file=sys.stderr)
     
+    # Get the repository map
+    # This might return an error string if aider command fails, which will be included in the prompt.
+    print("Fetching repository map from Aider...", file=sys.stderr)
+    repository_map_content = get_aider_repo_map()
+    if repository_map_content.startswith("Error:") or repository_map_content.startswith("An unexpected error occurred:"):
+        print(f"Warning: Failed to get repository map: {repository_map_content}", file=sys.stderr)
+        # Proceeding with the error message as the map content, so it's visible in the plan context.
+    else:
+        print("Successfully fetched repository map.", file=sys.stderr)
+
     try:
-        prompt = actual_prompt_template.format(feature_description=feature_description)
+        prompt = actual_prompt_template.format(
+            feature_description=feature_description,
+            repository_map=repository_map_content
+        )
     except KeyError as e:
-        # This happens if the custom prompt doesn't have {feature_description}
-        error_message = f"Error: The prompt template is missing the required placeholder {{feature_description}}. Offending key: {e}."
+        # This happens if the prompt template is missing a required placeholder
+        error_message = f"Error: The prompt template is missing a required placeholder. Offending key: {e}."
+        error_message += " Expected placeholders are typically {feature_description} and {repository_map}."
         if using_custom_prompt:
             error_message += f" Please check the custom prompt file: {prompt_override_path}"
         else:
-            error_message += " This might be an issue with the default prompt template." # Should not happen with default
+            error_message += " This might be an issue with the default prompt template."
         print(error_message, file=sys.stderr)
         return f"# Error Generating Plan\n\n{error_message}"
 
