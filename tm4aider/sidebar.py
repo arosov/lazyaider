@@ -316,54 +316,23 @@ class Sidebar(App):
                 return
 
             plan_generator_window_name = "tm4aider-plan-gen"
-            command_to_run = "python -m tm4aider.plan_generator"
-            target_pane = f"{self.TMUX_SESSION_NAME}:{plan_generator_window_name}.0" # Assuming pane 0
+            command_to_run = "python plan_generator.py" # Use top-level script
+            target_window_specifier = f"{self.TMUX_SESSION_NAME}:{plan_generator_window_name}"
+            # Pane 0 is the default initial pane in a new window
+            target_pane_for_keys = f"{target_window_specifier}.0" 
 
             try:
-                # Try to select the window to see if it exists
-                select_cmd_args = ["select-window", "-t", f"{self.TMUX_SESSION_NAME}:{plan_generator_window_name}"]
-                # Use _run_tmux_command directly, assuming it's available via tmux_utils
-                # We need to import/access _run_tmux_command or have a helper in tmux_utils
-                # For now, let's assume tmux_utils has what we need or we use it carefully.
-                # The summary of tmux_utils shows _run_tmux_command.
-                
-                # We need to ensure that the current Textual app (Sidebar) does not exit or hang
-                # if the tmux command fails in a way that _run_tmux_command(check=False) handles.
-                # The goal is to check existence without crashing the sidebar.
-                
-                # Check if window exists by trying to list it and see if we get output
-                # A more robust way than just trying to select and catching failure,
-                # as select might have side effects or its failure modes complex.
-                # However, a simple select attempt is often used.
-                # Let's try to select; if it fails (non-zero return), create.
-                
-                # We need to ensure that the current Textual app (Sidebar) does not exit or hang
-                # if the tmux command fails in a way that _run_tmux_command(check=False) handles.
-                # The goal is to check existence without crashing the sidebar.
-                
-                # Attempt to select the window. If this command succeeds, the window exists.
-                # We run with check=False to handle the case where it doesn't exist.
-                select_result = tmux_utils._run_tmux_command(
-                    ["select-window", "-t", target_pane.split('.')[0]], # target window
-                    check=False, 
-                    capture_output=True # To suppress output to sidebar's terminal
-                )
-
-                if select_result.returncode == 0:
+                # Try to select the window. If successful, it exists and is now active.
+                if tmux_utils.select_window(target_window_specifier):
                     self.log.info(f"Window '{plan_generator_window_name}' exists. Selecting and running command.")
-                    # Window exists, make sure it's selected (it should be already by select-window)
-                    # Then send keys to its first pane.
-                    tmux_utils.send_keys_to_pane(target_pane, command_to_run)
-                    tmux_utils.send_keys_to_pane(target_pane, "Enter")
-                    # Optionally, switch client to this window if not already focused
-                    # tmux select-window is usually sufficient if client is attached to this session
+                    # Window exists and is selected, send the command to its first pane.
+                    tmux_utils.send_keys_to_pane(target_pane_for_keys, command_to_run)
+                    tmux_utils.send_keys_to_pane(target_pane_for_keys, "Enter")
                 else:
                     self.log.info(f"Window '{plan_generator_window_name}' does not exist. Creating new window and running command.")
-                    # Window does not exist, create it and run the command
-                    # new-window command will also switch focus to it.
-                    tmux_utils._run_tmux_command(
-                        ["new-window", "-n", plan_generator_window_name, "-t", f"{self.TMUX_SESSION_NAME}:", command_to_run]
-                    )
+                    # Create the window, run the command in it, and select it (default behavior of create_window).
+                    tmux_utils.create_window(self.TMUX_SESSION_NAME, plan_generator_window_name, command_to_run, select=True)
+                
                 self.log.info(f"Successfully initiated plan generator in window '{plan_generator_window_name}'.")
 
             except FileNotFoundError:

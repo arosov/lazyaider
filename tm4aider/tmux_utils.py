@@ -61,3 +61,25 @@ def attach_session(session_name: str):
     """Replaces the current process with 'tmux attach-session'."""
     # FileNotFoundError will propagate from os.execvp if tmux is not found.
     os.execvp("tmux", ["tmux", "attach-session", "-t", session_name])
+
+def select_window(target_specifier: str) -> bool:
+    """
+    Selects the specified tmux window (e.g., "session_name:window_name" or "session_name:window_index").
+    Returns True if selection was successful (window exists), False otherwise.
+    """
+    result = _run_tmux_command(["select-window", "-t", target_specifier], check=False, capture_output=True)
+    return result.returncode == 0
+
+def create_window(session_name: str, window_name: str, command: str | None = None, select: bool = True) -> None:
+    """
+    Creates a new window in the specified session.
+    Optionally runs a command in the new window.
+    Optionally selects the new window.
+    """
+    cmd_args = ["new-window", "-n", window_name, "-t", f"{session_name}:"]
+    if not select:
+        cmd_args.append("-d")  # Create detached (don't select)
+    if command:
+        # If a command is provided, tmux new-window will execute it in the new window's initial pane.
+        cmd_args.append(command)
+    _run_tmux_command(cmd_args)
