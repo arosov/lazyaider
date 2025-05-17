@@ -207,17 +207,39 @@ class Sidebar(App):
         # and to allow paths to be at the start/end of lines or surrounded by common delimiters.
         # The actual path is in group 1.
         # Adjusted to be less greedy and more specific to typical file path characters.
-        # This regex is simplified and may not cover all edge cases or complex file names.
-        path_regex = r"[\s`'\"\(]?((?:[a-zA-Z0-9_.\-\+\%]+\/)*[a-zA-Z0-9_.\-\+\%]+\.[a-zA-Z0-9_.\-\+\%]+)[\s`'\"\,\.\!\?\)]?"
-        potential_paths = re.findall(path_regex, text)
+        # Extracts file paths from a markdown bullet list.
+        # e.g., "- path/to/file.py", "* `another/file.rs`"
+        extracted_paths = []
+        lines = text.splitlines()
+        for line in lines:
+            stripped_line = line.strip()
+            if stripped_line.startswith("- ") or stripped_line.startswith("* "):
+                # Remove the bullet point part
+                path_candidate = stripped_line[2:].strip()
+                # Remove potential backticks
+                if path_candidate.startswith("`") and path_candidate.endswith("`"):
+                    path_candidate = path_candidate[1:-1]
+                if path_candidate: # Ensure not empty after stripping
+                    extracted_paths.append(path_candidate)
 
-        # Further clean up: sometimes paths might be captured with a trailing quote or parenthesis if not handled by the context.
-        # For now, we rely on the regex group 1 to capture the core path.
-        # Also, remove duplicates and ensure they are actual strings.
-        unique_paths = sorted(list(set(str(p) for p in potential_paths if isinstance(p, str))))
-        self.log(f"Extracted potential paths: {unique_paths}")
+        unique_paths = sorted(list(set(extracted_paths)))
+        self.log(f"Extracted file paths from markdown list: {unique_paths}")
         return unique_paths
 
+    def _parse_section_content_chunks(self, section_content: str) -> dict[str, str]:
+        """
+        Parses section content into 'files_md', 'goals', and 'instructions' chunks.
+        Chunks are expected to be separated by an empty line.
+        """
+        parts = section_content.strip().split('\n\n', 2)
+        files_md = parts[0] if len(parts) > 0 else ""
+        goals = parts[1] if len(parts) > 1 else ""
+        instructions = parts[2] if len(parts) > 2 else ""
+        return {
+            "files_md": files_md,
+            "goals": goals,
+            "instructions": instructions,
+        }
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button press events from the sidebar."""
@@ -288,17 +310,40 @@ class Sidebar(App):
                     self.log.error(f"Could not retrieve content for section index {section_index}.")
                     return
 
-                # Extract file paths from the section content
-                potential_file_paths = self._extract_file_paths(section_content)
+                # Parse section content into chunks
+                content_chunks = self._parse_section_content_chunks(section_content)
+                files_md_chunk = content_chunks["files_md"]
+                goals_chunk = content_chunks["goals"]
+                instructions_chunk = content_chunks["instructions"]
+
+                # For debug purposes, write each chunk to a separate file
+                try:
+                    debug_dir = Path(".tm4aider") / "debug_chunks"
+                    debug_dir.mkdir(parents=True, exist_ok=True)
+                    plan_name_for_file = self.current_selected_plan_name or "unknown_plan"
+                    base_filename = f"plan_{plan_name_for_file}_sec_{section_index}_{action_type}"
+                    
+                    files_debug_path = debug_dir / f"{base_filename}_files.md"
+                    goals_debug_path = debug_dir / f"{base_filename}_goals.txt"
+                    instructions_debug_path = debug_dir / f"{base_filename}_instructions.txt"
+
+                    files_debug_path.write_text(files_md_chunk, encoding="utf-8")
+                    goals_debug_path.write_text(goals_chunk, encoding="utf-8")
+                    instructions_debug_path.write_text(instructions_chunk, encoding="utf-8")
+                    self.log(f"Saved content chunks for sec {section_index} to {debug_dir}")
+                except Exception as e:
+                    self.log.error(f"Error saving debug chunk files: {e}")
+
+                # Extract file paths from the "files_md" chunk
+                potential_file_paths = self._extract_file_paths(files_md_chunk)
                 existing_files = []
                 if potential_file_paths:
                     for p_path_str in potential_file_paths:
                         # Check relative to CWD, which is typical for Aider
-                        # Aider usually runs from the project root.
                         if Path(p_path_str).exists() and Path(p_path_str).is_file():
                             existing_files.append(p_path_str)
                         else:
-                            self.log(f"File path '{p_path_str}' from plan section does not exist or is not a file.")
+                            self.log(f"File path '{p_path_str}' from 'Files to add' list does not exist or is not a file.")
 
                 if existing_files:
                     files_to_add_str = " ".join(existing_files)
@@ -358,34 +403,34 @@ class Sidebar(App):
                 # This strongly implies: `/ask <content_here>`
                 # So, the content MUST be on one line or escaped.
                 # Let's replace newlines with a space for the prompt.
-                # New approach: send multi-line content using M-Enter
+                # New approach: send multi-line content (from instructions_chunk) using M-Enter
 
-                lines = section_content.split('\n')
+                instruction_lines = instructions_chunk.split('\n')
 
                 try:
-                    if not lines: # Should not happen if section_content is not None and stripped
-                        self.log.warning("Section content is empty after splitting, sending command prefix only.")
+                    if not instruction_lines or (len(instruction_lines) == 1 and not instruction_lines[0].strip()):
+                        self.log.warning("Instructions chunk is empty. Sending command prefix only.")
                         tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, aider_command_prefix.strip()) # Send command like /ask
                         tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter") # Submit
                         return
 
-                    # Send the command prefix and the first line
-                    first_line_content = lines[0]
-                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f"{aider_command_prefix}{first_line_content}")
-                    self.log(f"Sent to Aider (first line): {aider_command_prefix}{first_line_content[:50]}...")
+                    # Send the command prefix and the first line of instructions
+                    first_instruction_line = instruction_lines[0]
+                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f"{aider_command_prefix}{first_instruction_line}")
+                    self.log(f"Sent to Aider (first instruction line): {aider_command_prefix}{first_instruction_line[:50]}...")
 
-                    # Send subsequent lines with M-Enter
-                    for i, line in enumerate(lines[1:]):
+                    # Send subsequent instruction lines with M-Enter
+                    for i, line in enumerate(instruction_lines[1:]):
                         tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "M-Enter") # Alt+Enter for newline in prompt
                         tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, line)
-                        self.log(f"Sent to Aider (line {i+2}): {line[:50]}...")
+                        self.log(f"Sent to Aider (instruction line {i+2}): {line[:50]}...")
                     
                     # Finally, send Enter to submit the whole command
                     tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter")
-                    self.log(f"Submitted multi-line command to Aider for section {section_index} ({action_type}).")
+                    self.log(f"Submitted multi-line command to Aider for section {section_index} ({action_type}) using instructions chunk.")
 
                 except Exception as e:
-                    self.log.error(f"Error sending multi-line section content to tmux: {e}")
+                    self.log.error(f"Error sending multi-line instructions chunk to tmux: {e}")
 
             except (IndexError, ValueError) as e:
                 self.log.error(f"Error parsing plan section button ID '{button_id}': {e}")
