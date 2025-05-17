@@ -403,34 +403,44 @@ class Sidebar(App):
                 # This strongly implies: `/ask <content_here>`
                 # So, the content MUST be on one line or escaped.
                 # Let's replace newlines with a space for the prompt.
-                # New approach: send multi-line content (from instructions_chunk) using M-Enter
+                # Construct the full prompt content from goals and instructions
+                full_prompt_parts = []
+                stripped_goals = goals_chunk.strip()
+                stripped_instructions = instructions_chunk.strip()
 
-                instruction_lines = instructions_chunk.split('\n')
+                if stripped_goals:
+                    full_prompt_parts.append(stripped_goals)
+                if stripped_instructions:
+                    full_prompt_parts.append(stripped_instructions)
+                
+                full_prompt_content = "\n\n".join(full_prompt_parts)
 
                 try:
-                    if not instruction_lines or (len(instruction_lines) == 1 and not instruction_lines[0].strip()):
-                        self.log.warning("Instructions chunk is empty. Sending command prefix only.")
-                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, aider_command_prefix.strip()) # Send command like /ask
-                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter") # Submit
+                    if not full_prompt_content.strip(): # Check if combined content is empty
+                        self.log.warning(f"Both goals and instructions for section {section_index} are empty. Sending command prefix '{aider_command_prefix.strip()}' only.")
+                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, aider_command_prefix.strip())
+                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter")
                         return
 
-                    # Send the command prefix and the first line of instructions
-                    first_instruction_line = instruction_lines[0]
-                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f"{aider_command_prefix}{first_instruction_line}")
-                    self.log(f"Sent to Aider (first instruction line): {aider_command_prefix}{first_instruction_line[:50]}...")
+                    prompt_lines = full_prompt_content.split('\n')
 
-                    # Send subsequent instruction lines with M-Enter
-                    for i, line in enumerate(instruction_lines[1:]):
+                    # Send the command prefix and the first line of the combined prompt
+                    first_prompt_line = prompt_lines[0]
+                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f"{aider_command_prefix}{first_prompt_line}")
+                    self.log(f"Sent to Aider (first prompt line): {aider_command_prefix.strip()} {first_prompt_line[:50]}...")
+
+                    # Send subsequent prompt lines with M-Enter
+                    for i, line in enumerate(prompt_lines[1:]):
                         tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "M-Enter") # Alt+Enter for newline in prompt
                         tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, line)
-                        self.log(f"Sent to Aider (instruction line {i+2}): {line[:50]}...")
+                        self.log(f"Sent to Aider (prompt line {i+2}): {line[:50]}...")
                     
                     # Finally, send Enter to submit the whole command
                     tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter")
-                    self.log(f"Submitted multi-line command to Aider for section {section_index} ({action_type}) using instructions chunk.")
+                    self.log(f"Submitted multi-line command to Aider for section {section_index} ({action_type}) using combined goals and instructions.")
 
                 except Exception as e:
-                    self.log.error(f"Error sending multi-line instructions chunk to tmux: {e}")
+                    self.log.error(f"Error sending multi-line prompt (goals/instructions) to tmux: {e}")
 
             except (IndexError, ValueError) as e:
                 self.log.error(f"Error parsing plan section button ID '{button_id}': {e}")
