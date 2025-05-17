@@ -84,6 +84,10 @@ class Sidebar(App):
     current_plan_markdown_content: str | None = None
     current_selected_plan_name: str | None = None
 
+    # Constants for the refresh option in the Select widget
+    REFRESH_PLAN_LIST_PROMPT_TEXT: str = "(Refresh plan list)"
+    REFRESH_PLAN_LIST_VALUE: str = "_internal_refresh_plans_"
+
     def __init__(self):
         super().__init__()
         # Theme will be set in on_mount
@@ -109,18 +113,21 @@ class Sidebar(App):
         load_plan_select = self.query_one("#sel_load_plan", Select)
         # Store current value to attempt re-selection if Select.BLANK is not the value
         previous_selected_value = load_plan_select.value if load_plan_select.value is not Select.BLANK else None
+        if previous_selected_value == self.REFRESH_PLAN_LIST_VALUE:
+            previous_selected_value = None # Don't treat refresh action as a persistent selection to restore
 
         tm4aider_dir_name = ".tm4aider"
         plans_subdir_name = "plans"
         plans_base_path = Path(tm4aider_dir_name) / plans_subdir_name
 
-        plan_options = []
+        plan_options = [(self.REFRESH_PLAN_LIST_PROMPT_TEXT, self.REFRESH_PLAN_LIST_VALUE)] # Always add as first option
         if plans_base_path.is_dir():
             for item in sorted(plans_base_path.iterdir()): # Sort for consistent order
                 if item.is_dir():
                     plan_options.append((item.name, item.name)) # Use a tuple (text, value)
 
-        if plan_options:
+        # Check if there are any actual plans beyond the refresh option
+        if len(plan_options) > 1: # More than just the refresh option
             load_plan_select.set_options(plan_options)
             load_plan_select.disabled = False
             load_plan_select.prompt = "Select a plan..."
@@ -532,10 +539,25 @@ class Sidebar(App):
         plan_sections_container = self.query_one("#plan_sections_container", Grid)
 
         if event.select.id == "sel_load_plan":
-            # Clear previous sections first
+            if event.value == self.REFRESH_PLAN_LIST_VALUE:
+                self.log("User selected refresh option. Refreshing plan list.")
+                # Set Select to BLANK before calling refresh. This achieves:
+                # 1. Visually clears the "(Refresh plan list)" text from the Select widget.
+                # 2. Ensures _refresh_plan_list (when it reads previous_selected_value) sees None.
+                # 3. Queues an on_select_changed event for BLANK, which will run after this handler returns
+                #    and after _refresh_plan_list completes (if _refresh_plan_list doesn't set a new value).
+                event.select.value = Select.BLANK
+                await self._refresh_plan_list()
+                # _refresh_plan_list might have set a new value (e.g. restored from config),
+                # which would trigger its own on_select_changed.
+                # If not, the on_select_changed for BLANK will proceed.
+                return # Stop processing this specific "refresh" event.
+
+            # Clear previous sections first (only if not the refresh action)
             await plan_sections_container.remove_children()
 
             if event.value is not Select.BLANK and event.value is not None:
+                # This check ensures we don't try to process REFRESH_PLAN_LIST_VALUE as a plan name
                 self.current_selected_plan_name = str(event.value) # Store selected plan name
                 self.log(f"Plan selected: {self.current_selected_plan_name}.")
 
