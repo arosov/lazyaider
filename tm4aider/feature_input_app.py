@@ -1,5 +1,6 @@
 import functools
 import time # Add this import
+import re # Add this import
 from textual.app import App, ComposeResult
 from textual.containers import Vertical, Horizontal
 from textual.widgets import Header, Footer, Button, Static, TextArea, LoadingIndicator
@@ -288,6 +289,30 @@ if __name__ == "__main__":
     # This __main__ block is for direct testing of the FeatureInputApp.
     # It will create/update a CSS file in the expected location relative to this script.
     import os
+
+    # Helper functions for plan saving (mirrored from plan_generator.py for test purposes)
+    def _extract_plan_title_for_test(markdown_content: str) -> str:
+        """Extracts the plan title from the first H1 header in markdown."""
+        lines = markdown_content.splitlines()
+        for line in lines:
+            stripped_line = line.strip()
+            if stripped_line.startswith("# "):
+                title = stripped_line[2:].strip()
+                if title:
+                    return title
+        return "untitled-plan"
+
+    def _sanitize_for_path_for_test(text: str) -> str:
+        """Converts a string into a slug suitable for file/directory names."""
+        text = text.lower()
+        text = re.sub(r'\s+', '-', text)
+        text = re.sub(r'[^a-z0-9\-]', '', text)
+        text = re.sub(r'-+', '-', text)
+        text = text.strip('-')
+        if not text:
+            return "default-plan-title"
+        return text
+
     # Determine the directory of the current script
     script_dir = os.path.dirname(os.path.abspath(__file__))
     css_file_path = os.path.join(script_dir, "feature_input_app.tcss")
@@ -334,11 +359,36 @@ if __name__ == "__main__":
     if plan:
         print("\n--- Generated Plan (from app exit) ---")
         print(plan)
+
+        plan_title = _extract_plan_title_for_test(plan)
+        sanitized_title = _sanitize_for_path_for_test(plan_title)
+        
+        # Note: This test save path is relative to CWD when running this script directly.
+        # If running from project root, it will be .tm4aider/plans/...
+        # If running from tm4aider/ it will be ../.tm4aider/plans/...
+        # For consistency with plan_generator.py, we assume CWD is project root.
+        # If this script is run from tm4aider/, .tm4aider/ will be created inside tm4aider/
+        # A more robust approach for tests might use tempfile or ensure paths are absolute.
+        # For now, using relative path as per original structure.
+        plan_dir_name = ".tm4aider" # Base directory for all tm4aider specific files
+        plans_subdir = "plans"      # Subdirectory for plans
+        
+        # Construct path relative to where the script is run.
+        # If script is run from project root, this will create .tm4aider/plans/etc.
+        # If script is run from tm4aider/ directory, it will create tm4aider/.tm4aider/plans/etc.
+        # To ensure it's always at project root level, one might use `os.path.join(script_dir, "..", plan_dir_name, ...)`
+        # but that assumes a fixed depth. For now, let's keep it simple and relative to CWD.
+        # The user's request implies .tm4aider is at the root.
+        
+        save_dir_path = os.path.join(plan_dir_name, plans_subdir, sanitized_title)
+        save_file_path = os.path.join(save_dir_path, f"{sanitized_title}.md")
+
         try:
-            with open("plan.md", "w", encoding="utf-8") as f_out:
+            os.makedirs(save_dir_path, exist_ok=True)
+            with open(save_file_path, "w", encoding="utf-8") as f_out:
                 f_out.write(plan)
-            print("\nPlan saved to plan.md (in current directory)")
+            print(f"\nPlan saved to {save_file_path} (relative to CWD)")
         except IOError as e_save:
-            print(f"\nError saving plan.md: {e_save}")
+            print(f"\nError saving plan to {save_file_path}: {e_save}")
     else:
         print("\nInput/Plan generation cancelled or discarded.")
