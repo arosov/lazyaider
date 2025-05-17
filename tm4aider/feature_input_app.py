@@ -11,7 +11,7 @@ from textual.timer import Timer # Add this import
 from .llm_planner import generate_plan
 from . import config # Import config to access settings like model name
 
-class FeatureInputApp(App[str | None]):
+class FeatureInputApp(App[tuple[str, str] | None]):
     """Enter feature description, generate a plan, and review it."""
 
     BINDINGS = [
@@ -31,6 +31,7 @@ class FeatureInputApp(App[str | None]):
         # Theme will be set in on_mount
         self.current_ui_state = self.STATE_INPUT_FEATURE
         self.generated_plan_content: str | None = None
+        self.feature_description_content: str | None = None # To store the original feature description
         self._llm_worker: Worker | None = None
         self._llm_call_start_time: float | None = None # Renamed to avoid conflict
         self._loading_timer: Timer | None = None
@@ -140,6 +141,8 @@ class FeatureInputApp(App[str | None]):
                 description_area.styles.border_title_color = "red"
                 description_area.styles.border = ("heavy", "red")
                 return
+            
+            self.feature_description_content = description # Store the feature description
 
             description_area.border_title = None # Reset border title
             # Reset border styles by removing the ones applied for the error state.
@@ -188,7 +191,11 @@ class FeatureInputApp(App[str | None]):
             self.exit(None) # Exit without a plan
 
         elif button_id == "save_plan_button":
-            self.exit(self.generated_plan_content) # Exit with the generated plan
+            if self.generated_plan_content is not None and self.feature_description_content is not None:
+                self.exit((self.generated_plan_content, self.feature_description_content))
+            else:
+                # Fallback: should not happen if UI logic is correct, but as a safety measure.
+                self.exit(None)
 
         elif button_id == "discard_plan_button":
             self.exit(None) # Exit without a plan
@@ -355,12 +362,14 @@ if __name__ == "__main__":
 
     print("Testing FeatureInputApp. Ensure LLM API keys and dependencies are configured.")
     app = FeatureInputApp()
-    plan = app.run()
-    if plan:
-        print("\n--- Generated Plan (from app exit) ---")
-        print(plan)
+    app_result = app.run() # App now returns a tuple or None
+    if app_result:
+        plan_content, feature_description = app_result # Unpack the tuple
 
-        plan_title = _extract_plan_title_for_test(plan)
+        print("\n--- Generated Plan (from app exit) ---")
+        print(plan_content)
+
+        plan_title = _extract_plan_title_for_test(plan_content) # Use plan_content for title
         sanitized_title = _sanitize_for_path_for_test(plan_title)
         
         # Note: This test save path is relative to CWD when running this script directly.
@@ -385,10 +394,20 @@ if __name__ == "__main__":
 
         try:
             os.makedirs(save_dir_path, exist_ok=True)
-            with open(save_file_path, "w", encoding="utf-8") as f_out:
-                f_out.write(plan)
-            print(f"\nPlan saved to {save_file_path} (relative to CWD)")
+            
+            # Save the generated plan
+            plan_file_path = os.path.join(save_dir_path, f"{sanitized_title}.md")
+            with open(plan_file_path, "w", encoding="utf-8") as f_out_plan:
+                f_out_plan.write(plan_content)
+            print(f"\nPlan saved to {plan_file_path} (relative to CWD)")
+
+            # Save the feature description
+            feature_desc_file_path = os.path.join(save_dir_path, "feature_description.md")
+            with open(feature_desc_file_path, "w", encoding="utf-8") as f_out_desc:
+                f_out_desc.write(feature_description)
+            print(f"Feature description saved to {feature_desc_file_path} (relative to CWD)")
+
         except IOError as e_save:
-            print(f"\nError saving plan to {save_file_path}: {e_save}")
+            print(f"\nError saving files to {save_dir_path}: {e_save}")
     else:
         print("\nInput/Plan generation cancelled or discarded.")
