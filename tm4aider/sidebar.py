@@ -315,6 +315,8 @@ class Sidebar(App):
                 files_md_chunk = content_chunks["files_md"]
                 goals_chunk = content_chunks["goals"]
                 instructions_chunk = content_chunks["instructions"]
+                self.log(f"DIAGNOSTIC: Raw goals_chunk: {repr(goals_chunk)}")
+                self.log(f"DIAGNOSTIC: Raw instructions_chunk: {repr(instructions_chunk)}")
 
                 # For debug purposes, write each chunk to a separate file
                 try:
@@ -407,6 +409,9 @@ class Sidebar(App):
                 full_prompt_parts = []
                 stripped_goals = goals_chunk.strip()
                 stripped_instructions = instructions_chunk.strip()
+                self.log(f"DIAGNOSTIC: Stripped goals_chunk: {repr(stripped_goals)}")
+                self.log(f"DIAGNOSTIC: Stripped instructions_chunk: {repr(stripped_instructions)}")
+                self.log(f"DIAGNOSTIC: Condition check: bool(stripped_instructions) is {bool(stripped_instructions)}")
 
                 if stripped_goals:
                     full_prompt_parts.append(stripped_goals)
@@ -414,6 +419,8 @@ class Sidebar(App):
                     full_prompt_parts.append(stripped_instructions)
                 
                 full_prompt_content = "\n\n".join(full_prompt_parts)
+                self.log(f"DIAGNOSTIC: full_prompt_parts: {repr(full_prompt_parts)}")
+                self.log(f"DIAGNOSTIC: full_prompt_content before sending: {repr(full_prompt_content)}")
 
                 try:
                     if not full_prompt_content.strip(): # Check if combined content is empty
