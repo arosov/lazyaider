@@ -53,6 +53,9 @@ class Sidebar(App):
         min-width: 6; /* Removed as auto width is desired */
         padding: 0 0; /* Reduce inner padding: 0 for top/bottom, 1 for left/right */
     }
+    #plan_collapsible {
+        height: auto; /* Ensure the collapsible itself wraps its content when expanded */
+    }
     """
 
     # These will be set dynamically when the app is launched by the main script logic
@@ -152,7 +155,7 @@ class Sidebar(App):
                     yield Button("Start Aider", id="btn_start_aider", variant="success")
                     yield Button("Detach Session", id="btn_detach_session", variant="primary")
                     yield Button("Destroy Session", id="btn_quit_session", variant="error")
-                with Collapsible(title="Plan", collapsed=True): # New section for Plan
+                with Collapsible(title="Plan", collapsed=True, id="plan_collapsible"): # New section for Plan
                     yield Select([], id="sel_load_plan", prompt="Load plan...")
                     yield Vertical(id="plan_sections_container") # Container for dynamic plan sections
         yield Footer()
