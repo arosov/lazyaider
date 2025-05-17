@@ -495,7 +495,7 @@ class Sidebar(App):
                         return
 
                     for i, title in enumerate(section_titles):
-                        section_label = Label(f"{title}")
+                        section_label = Label(f"{title.strip()}")
 
                         buttons_container = Horizontal()
                         ask_button = Button("ask", id=f"plan_sec_{i}_ask", classes="plan_action_button")
