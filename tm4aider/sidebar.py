@@ -17,12 +17,12 @@ class Sidebar(App):
         layout: vertical;
     }
     Horizontal#main_layout {
-        /*height: 1fr; /* Make Horizontal fill available vertical space between Header and Footer */
+        height: 1fr; /* Make Horizontal fill available vertical space between Header and Footer */
         background: $primary-background-lighten-1; /* Slightly different background for sidebar */
     }
     #sidebar {
         width: 100%;
-        height: auto;
+        height: 1fr; /* Make VerticalScroll fill the height of its parent (main_layout) */
         padding: 1;
         border-left: thick $primary-background-darken-2;
         background: $primary-background-lighten-1; /* Slightly different background for sidebar */
