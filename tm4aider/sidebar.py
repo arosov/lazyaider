@@ -49,8 +49,8 @@ class Sidebar(App):
     }
     .plan_action_button {
         margin-right: 0; /* Space between action buttons */
-        min-width: 8; /* Removed as auto width is desired */
-        padding: 0 1; /* Reduce inner padding: 0 for top/bottom, 1 for left/right */
+        min-width: 6; /* Removed as auto width is desired */
+        padding: 0 0; /* Reduce inner padding: 0 for top/bottom, 1 for left/right */
     }
     """
 
@@ -105,7 +105,7 @@ class Sidebar(App):
             load_plan_select.disabled = True
             load_plan_select.prompt = "No plans available"
             self.log(f"No plan directories found in {plans_base_path}. 'Load plan' select disabled.")
-        
+
         # Attempt to pre-select plan from config if options are available
         if not load_plan_select.disabled and self.TMUX_SESSION_NAME:
             from tm4aider import config as app_config_module # Ensure import
@@ -210,7 +210,7 @@ class Sidebar(App):
         # This regex is simplified and may not cover all edge cases or complex file names.
         path_regex = r"[\s`'\"\(]?((?:[a-zA-Z0-9_.\-\+\%]+\/)*[a-zA-Z0-9_.\-\+\%]+\.[a-zA-Z0-9_.\-\+\%]+)[\s`'\"\,\.\!\?\)]?"
         potential_paths = re.findall(path_regex, text)
-        
+
         # Further clean up: sometimes paths might be captured with a trailing quote or parenthesis if not handled by the context.
         # For now, we rely on the regex group 1 to capture the core path.
         # Also, remove duplicates and ensure they are actual strings.
@@ -299,7 +299,7 @@ class Sidebar(App):
                             existing_files.append(p_path_str)
                         else:
                             self.log(f"File path '{p_path_str}' from plan section does not exist or is not a file.")
-                
+
                 if existing_files:
                     files_to_add_str = " ".join(existing_files)
                     add_command = f"/add {files_to_add_str}"
@@ -313,7 +313,7 @@ class Sidebar(App):
 
                 # Determine the Aider command prefix
                 aider_command_prefix = f"/{action_type} " # e.g., "/ask ", "/code ", "/architect "
-                
+
                 # Send the section content prefixed with the command
                 # Ensure the content is sent as a single block, handling newlines appropriately.
                 # tmux send-keys will interpret newlines in the string as separate "Enter" presses
@@ -329,7 +329,7 @@ class Sidebar(App):
                 # This might lose formatting, but is safer for Aider's command parsing.
                 # Alternatively, one could send the command, then paste the content, then send Enter.
                 # For simplicity, let's try sending it as one line first.
-                
+
                 # To send multi-line content to Aider, it's often better to use /edit or rely on
                 # Aider's ability to read from a temp file or clipboard.
                 # Sending raw newlines via send-keys can be problematic.
@@ -340,7 +340,7 @@ class Sidebar(App):
                 # Given the request, we will send the command and then the content.
                 # This implies the content should be on the same "line" as the command for Aider.
                 # So, we should probably make section_content a single line.
-                
+
                 # Let's reconsider: Aider's /ask, /code, /architect commands take the rest of the line as the prompt.
                 # If section_content has newlines, it will break.
                 # The most straightforward way is to make section_content a single line.
@@ -358,9 +358,9 @@ class Sidebar(App):
                 # This strongly implies: `/ask <content_here>`
                 # So, the content MUST be on one line or escaped.
                 # Let's replace newlines with a space for the prompt.
-                        
+
                 prompt_content = section_content.replace('\n', ' ')
-                        
+
                 full_aider_command = f"{aider_command_prefix}{prompt_content}"
 
                 try:
