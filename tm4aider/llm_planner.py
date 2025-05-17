@@ -9,39 +9,33 @@ You are an expert software development assistant. Your task is to take a user's 
 and break it down into a detailed, step-by-step plan. This plan will be used with a coding assistant
 like Aider. Each step in the plan should be actionable and largely independent.
 
-The output MUST be a Markdown document with the following structure:
-
-# Plan for: [Feature Description]
-
-## Prerequisites
-
-- List any setup, configurations, or files that need to be in place before starting.
-- Specify any files that should be initially added to the Aider chat (e.g., `/add file1.py file2.py`).
-
-## Step 1: [Descriptive Title for Step 1]
-
-- **Goal:** Briefly state the objective of this step.
-- **Files to add to Aider:** List the specific file paths that should be added to Aider for this step (e.g., `/add path/to/file.py new_file.py`). If new files are to be created, list their proposed paths.
-- **Instructions:** Provide clear, concise instructions for the LLM coding assistant (Aider) to implement this step. Be specific about the changes, functions, classes, or logic to be added or modified.
-
-## Step 2: [Descriptive Title for Step 2]
-
-- **Goal:** ...
-- **Files to add to Aider:** ...
-- **Instructions:** ...
-
-... (Repeat for as many steps as necessary) ...
-
-## Summary & Next Steps
-
-- Briefly summarize what will be achieved.
-- Mention any manual verification or follow-up tasks.
-
 **Important Guidelines for each step:**
 - **Independence:** Each step should be as self-contained as possible. Assume Aider's context is reset (e.g., with `/clear`) before each step, and only the specified files are added for that step.
 - **Clarity:** Instructions must be unambiguous.
 - **Aider-Friendly:** Phrase instructions as if you are talking to Aider.
-- **File Specificity:** Be precise about filenames and paths. If a file is new, indicate that.
+- **File Specificity:** Be accurate about filenames and paths. Account for files created in previous steps.
+
+The output MUST be a Markdown document with the following structure:
+
+# [Short feature title from user description]
+
+
+## Step 1: [Descriptive Title for Step 1]
+
+- **Files to add to Aider:** List the specific file paths that should be added to Aider for this step (e.g., `/add path/to/file.py new_file.py`). Use a Markdown bullet list.
+
+- **Goal:** Briefly state the objective of this step.
+- **Instructions:** Provide clear, concise instructions for the LLM coding assistant (Aider) to implement this step. Be specific about the changes, functions, classes, or logic to be added or modified.
+
+## Step 2: [Descriptive Title for Step 2]
+
+- **Files to add to Aider:** ...
+
+- **Goal:** ...
+- **Instructions:** ...
+
+... (Repeat for as many steps as necessary) ...
+
 
 User's Feature Description:
 ---
@@ -110,15 +104,15 @@ def generate_plan(feature_description: str) -> str:
         # Accessing content according to litellm's current typical response structure
         if response.choices and response.choices[0].message and response.choices[0].message.content:
             plan_content = response.choices[0].message.content.strip()
-            
+
             total_tokens: int | None = None
             if response.usage and hasattr(response.usage, 'total_tokens'):
                 total_tokens = response.usage.total_tokens
-            
+
             # Log to stderr for debugging/logging, UI will display it too
             token_msg = f"{total_tokens} tokens" if total_tokens is not None else "token usage N/A"
             print(f"LLM ({model}) response received. Usage: {token_msg}.", file=sys.stderr)
-                
+
             return plan_content, model, total_tokens
         else:
             error_message = "Error: LLM response structure was unexpected or content was empty."
@@ -153,22 +147,22 @@ if __name__ == '__main__':
     # It requires that the `tm4aider` package (and its config) is discoverable.
     # You might need to run this from the project root or adjust PYTHONPATH.
     # Example: python -m tm4aider.llm_planner
-    
+
     print("Testing LLM Planner Module...")
     # Ensure API key is set for the default or configured model
     # For example, for OpenAI, set OPENAI_API_KEY.
     # The generate_plan function itself will print warnings if keys are missing for common models.
-    
+
     # A default model for testing if config isn't fully set up or accessible here
     test_model_name = config.settings.get("llm_model") if 'config' in globals() and hasattr(config, 'settings') else "gpt-3.5-turbo"
-    
+
     print(f"Using model: {test_model_name} (from config or default for test)")
 
     sample_feature = "Implement a basic CLI tool that takes a filename as input and counts the number of lines in that file. The tool should be robust and handle file not found errors."
     print(f"Generating plan for: \"{sample_feature}\"\n", file=sys.stderr)
-    
+
     plan = generate_plan(sample_feature)
-    
+
     print("\n--- Generated Plan ---")
     print(plan)
     print("----------------------")
