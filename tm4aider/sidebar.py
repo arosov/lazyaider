@@ -63,11 +63,11 @@ class Sidebar(App):
     #plan_collapsible {
         align: left top; /* Aligns the title and the content box to top-left */
         /* overflow_y: auto; /* Removed to let the parent VerticalScroll handle scrolling */
-        height: auto; /* Ensure Collapsible itself wraps its content */
+        /* Rely on default height behavior for Collapsible widget. */
     }
     #plan_collapsible > .collapsible-content {
         align: left top; /* Aligns children (Select, plan_sections_container) to top-left */
-        height: auto; /* Ensure the content area wraps its children */
+        /* Rely on default height behavior for this Vertical container (auto). */
     }
     """
 
