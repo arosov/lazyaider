@@ -7,6 +7,7 @@ DEFAULT_SIDEPANE_PERCENT_WIDTH = 20
 DEFAULT_THEME_NAME = "light" # Textual's default theme
 DEFAULT_LLM_MODEL = "gpt-3.5-turbo" # Default LLM model
 DEFAULT_LLM_API_KEY = None # Default LLM API key
+DEFAULT_PLAN_GENERATION_PROMPT_OVERRIDE_PATH = None # Default path for prompt override file
 
 def find_config_file() -> str | None:
     """
@@ -68,6 +69,30 @@ def load_config() -> dict:
         config["llm_api_key"] = DEFAULT_LLM_API_KEY
     elif "llm_api_key" not in config:
         config["llm_api_key"] = DEFAULT_LLM_API_KEY
+
+    # Ensure plan_generation_prompt_override_path is a string or None
+    if "plan_generation_prompt_override_path" in config and \
+       not (isinstance(config.get("plan_generation_prompt_override_path"), str) or \
+            config.get("plan_generation_prompt_override_path") is None):
+        print(f"Warning: 'plan_generation_prompt_override_path' in {config_path or 'config'} is not a string or null. Using default value.", file=sys.stderr)
+        config["plan_generation_prompt_override_path"] = DEFAULT_PLAN_GENERATION_PROMPT_OVERRIDE_PATH
+    elif "plan_generation_prompt_override_path" not in config:
+        config["plan_generation_prompt_override_path"] = DEFAULT_PLAN_GENERATION_PROMPT_OVERRIDE_PATH
+    
+    # Ensure the path is absolute if provided, or None
+    if isinstance(config["plan_generation_prompt_override_path"], str):
+        # Expand ~ and make absolute. If path is invalid, it will be handled by the consuming code.
+        expanded_path = os.path.expanduser(config["plan_generation_prompt_override_path"])
+        if not os.path.isabs(expanded_path) and config["plan_generation_prompt_override_path"]: # only if not empty string
+             # if not absolute, make it relative to the config file's directory if possible, else CWD
+            if config_path:
+                config["plan_generation_prompt_override_path"] = os.path.abspath(os.path.join(os.path.dirname(config_path), expanded_path))
+            else: # if no config file, relative to CWD
+                config["plan_generation_prompt_override_path"] = os.path.abspath(expanded_path)
+        else: # it was already absolute or an empty string
+            config["plan_generation_prompt_override_path"] = expanded_path
+
+
     return config
 
 def save_config(current_config: dict) -> None:
