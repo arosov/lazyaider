@@ -198,7 +198,6 @@ class Sidebar(App):
                 with Collapsible(title="Controls", collapsed=False, id="controls_collapsible"):
                     yield Button("Start Aider", id="btn_start_aider", variant="success")
                     yield Button("Generate plan", id="btn_generate_plan") # Default variant
-                    yield Button("Refresh plans", id="btn_refresh_plans") # New button
                     yield Button("Detach Session", id="btn_detach_session", variant="primary")
                     yield Button("Destroy Session", id="btn_quit_session", variant="error")
                 with Collapsible(title="Plan", collapsed=True, id="plan_collapsible"): # New section for Plan
@@ -370,10 +369,6 @@ class Sidebar(App):
                 self.log.error(f"Error managing tmux window for plan generator: {e.stderr.decode() if e.stderr else e}")
             except Exception as e:
                 self.log.error(f"An unexpected error occurred while managing plan generator window: {e}")
-
-        elif button_id == "btn_refresh_plans":
-            self.log.info("Refresh plans button pressed. Refreshing plan list.")
-            await self._refresh_plan_list()
 
         elif button_id and button_id.startswith("plan_sec_"):
             # Example ID: "plan_sec_0_ask"
