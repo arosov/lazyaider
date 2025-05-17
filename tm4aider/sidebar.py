@@ -130,13 +130,14 @@ class Sidebar(App):
         if kill_session and self.TMUX_SESSION_NAME:
             session_to_kill = self.TMUX_SESSION_NAME # Capture before it might be cleared
             try:
-                tmux_utils.kill_session(session_to_kill)
-                self.log(f"Sent kill-session for tmux session: {session_to_kill}")
-                # Remove from config after successful kill
+                # Remove from config before attempting to kill
                 # Requires config module and settings to be accessible
                 from tm4aider import config as app_config # late import
                 app_config.remove_session_from_config(session_to_kill)
                 self.log(f"Removed session '{session_to_kill}' from config.")
+
+                tmux_utils.kill_session(session_to_kill)
+                self.log(f"Sent kill-session for tmux session: {session_to_kill}")
 
             except FileNotFoundError:
                 self.log.error("Error: tmux command not found when trying to kill session.")
