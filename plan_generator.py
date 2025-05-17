@@ -83,6 +83,11 @@ if __name__ == "__main__":
         type=str,
         help="Path to a file where the LLM prompt should be saved. Only used in non-interactive mode."
     )
+    parser.add_argument(
+        "--use-repomix",
+        action="store_true",
+        help="Use 'repomix' to generate the repository map instead of Aider's internal method. Only used in non-interactive mode."
+    )
     # TODO: Add --session-name argument if we want to specify session for non-interactive mode
     # For now, non-interactive mode will use global/default prompt settings from config.
 
@@ -104,11 +109,17 @@ if __name__ == "__main__":
             sys.exit(1)
 
         print(f"Generating plan non-interactively from: {args.plan_file}", file=sys.stderr)
+        
+        repomap_method_cli = "repomix" if args.use_repomix else "aider"
+        if args.use_repomix:
+            print("Using repomix for repository map generation.", file=sys.stderr)
+
         # In non-interactive mode, session_name is None, so global/default prompt is used.
         plan_result = generate_plan(
             feature_description_cli,
             session_name=None,
-            prompt_dump_file=args.dump_prompt  # Pass the dump_prompt argument
+            repomap_method=repomap_method_cli, # Pass the chosen repomap method
+            prompt_dump_file=args.dump_prompt
         )
 
         if isinstance(plan_result, tuple):
