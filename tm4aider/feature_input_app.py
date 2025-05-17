@@ -196,7 +196,8 @@ class FeatureInputApp(App[str | None]):
         """Synchronous wrapper to call generate_plan and then update UI from thread."""
         try:
             # generate_plan now returns a tuple (plan_content, model_name, token_count) or an error string
-            plan_data = generate_plan(description)
+            # Since FeatureInputApp runs before session selection, session_name is None.
+            plan_data = generate_plan(description, session_name=None)
             self.call_from_thread(self._handle_plan_generation_result, plan_data)
         except Exception as e:
             # This catch is for unexpected errors in the _call_generate_plan itself,

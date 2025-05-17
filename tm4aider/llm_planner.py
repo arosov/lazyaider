@@ -2,11 +2,12 @@ import litellm
 import os
 import sys
 from . import config # Use relative import for config within the same package
-from .prompt import PLAN_GENERATION_PROMPT_TEMPLATE # Import the template
+from .prompt import PLAN_GENERATION_PROMPT_TEMPLATE as DEFAULT_PLAN_GENERATION_PROMPT_TEMPLATE # Import and alias
 
-def generate_plan(feature_description: str) -> str:
+def generate_plan(feature_description: str, session_name: str | None = None) -> tuple[str, str, int | None] | str:
     """
     Generates a development plan in Markdown format using an LLM.
+    Uses session-specific prompt override if available, else global, else default.
     The model is determined by the 'llm_model' setting in the configuration.
 
     Args:
@@ -48,7 +49,38 @@ def generate_plan(feature_description: str) -> str:
             api_key_to_use = os.getenv("ANTHROPIC_API_KEY")
     # Add more checks for other providers as needed, following the same pattern
 
-    prompt = PLAN_GENERATION_PROMPT_TEMPLATE.format(feature_description=feature_description)
+    prompt_override_path = config.get_plan_prompt_override_path(session_name)
+    actual_prompt_template = DEFAULT_PLAN_GENERATION_PROMPT_TEMPLATE
+    using_custom_prompt = False
+    if prompt_override_path:
+        try:
+            # Ensure path is not empty before trying to open
+            if prompt_override_path.strip():
+                with open(prompt_override_path, 'r', encoding='utf-8') as f:
+                    actual_prompt_template = f.read()
+                print(f"Using custom prompt template from: {prompt_override_path}", file=sys.stderr)
+                using_custom_prompt = True
+            else: # Path is an empty string, treat as no override
+                print(f"Info: Plan generation prompt override path is empty. Using default template.", file=sys.stderr)
+
+        except FileNotFoundError:
+            print(f"Warning: Prompt template file not found at {prompt_override_path}. Using default template.", file=sys.stderr)
+        except Exception as e:
+            print(f"Warning: Could not load prompt template from {prompt_override_path}: {e}. Using default template.", file=sys.stderr)
+    
+    try:
+        prompt = actual_prompt_template.format(feature_description=feature_description)
+    except KeyError as e:
+        # This happens if the custom prompt doesn't have {feature_description}
+        error_message = f"Error: The prompt template is missing the required placeholder {{feature_description}}. Offending key: {e}."
+        if using_custom_prompt:
+            error_message += f" Please check the custom prompt file: {prompt_override_path}"
+        else:
+            error_message += " This might be an issue with the default prompt template." # Should not happen with default
+        print(error_message, file=sys.stderr)
+        return f"# Error Generating Plan\n\n{error_message}"
+
+
     messages = [{"role": "user", "content": prompt}]
 
     try:
@@ -120,10 +152,54 @@ if __name__ == '__main__':
     sample_feature = "Implement a basic CLI tool that takes a filename as input and counts the number of lines in that file. The tool should be robust and handle file not found errors."
     print(f"Generating plan for: \"{sample_feature}\"\n", file=sys.stderr)
 
-    plan = generate_plan(sample_feature)
+    # Test with no session (uses global or default prompt)
+    print("Testing with no session context (global/default prompt):")
+    plan_data_global = generate_plan(sample_feature) # session_name is None by default
 
-    print("\n--- Generated Plan ---")
-    print(plan)
+    print("\n--- Generated Plan (Global/Default Prompt) ---")
+    if isinstance(plan_data_global, tuple):
+        plan_content, _, _ = plan_data_global
+        print(plan_content)
+        if not plan_content.startswith("# Error Generating Plan"):
+            try:
+                with open("test_plan_global.md", "w", encoding="utf-8") as f:
+                    f.write(plan_content)
+                print("\nTest plan (global/default) saved to test_plan_global.md")
+            except IOError as e:
+                print(f"\nError saving test_plan_global.md: {e}", file=sys.stderr)
+        else:
+            print("\nPlan generation (global/default) failed. See error message above.", file=sys.stderr)
+
+    else: # Error string
+        print(plan_data_global)
+        print("\nPlan generation (global/default) failed. See error message above.", file=sys.stderr)
+    print("------------------------------------------")
+
+    # Example of how to test with a session-specific prompt (requires config setup)
+    # You would need to:
+    # 1. Create/modify .tm4aider.conf.yml to have a session, e.g., "test-session"
+    #    managed_sessions:
+    #      test-session:
+    #        plan_generation_prompt_override_path: /path/to/your/test_session_prompt.md
+    # 2. Create /path/to/your/test_session_prompt.md with content like "Session plan for {feature_description}"
+    # Then you could call:
+    # print("\nTesting with 'test-session' context (session-specific prompt if configured):")
+    # config.settings = config.load_config() # Reload config to pick up changes if made manually
+    # plan_data_session = generate_plan(sample_feature, session_name="test-session")
+    # print("\n--- Generated Plan (Session-Specific Prompt) ---")
+    # if isinstance(plan_data_session, tuple):
+    #     plan_content_session, _, _ = plan_data_session
+    #     print(plan_content_session)
+    # else:
+    #     print(plan_data_session)
+    # print("----------------------------------------------")
+
+    # For the current test, we'll just print the global one.
+    # The user needs to set up config for session-specific test.
+
+    # Original print for the first result (plan_data_global)
+    # print("\n--- Generated Plan ---")
+    # print(plan_data_global[0] if isinstance(plan_data_global, tuple) else plan_data_global) # Print content or error
     print("----------------------")
 
     if not plan.startswith("# Error Generating Plan"):

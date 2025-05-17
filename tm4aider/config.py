@@ -10,13 +10,13 @@ KEY_MANAGED_SESSIONS = "managed_sessions"
 KEY_THEME_NAME = "theme_name"
 KEY_LLM_MODEL = "llm_model"
 KEY_LLM_API_KEY = "llm_api_key"
-KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH = "plan_generation_prompt_override_path"
+KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH = "plan_generation_prompt_override_path" # Can be global or per-session
 
 DEFAULT_SIDEPANE_PERCENT_WIDTH = 20
 DEFAULT_THEME_NAME = "light" # Textual's default theme
 DEFAULT_LLM_MODEL = "gpt-3.5-turbo" # Default LLM model
 DEFAULT_LLM_API_KEY = None # Default LLM API key
-DEFAULT_PLAN_GENERATION_PROMPT_OVERRIDE_PATH = None # Default path for prompt override file
+DEFAULT_PLAN_GENERATION_PROMPT_OVERRIDE_PATH = None # Default global path for prompt override file
 
 def find_config_file() -> str | None:
     """
@@ -57,10 +57,22 @@ def load_config() -> dict:
              print(f"Warning: '{KEY_SIDEPANE_PERCENT_WIDTH}' in {config_path or 'config'} is not an integer. Using default value.", file=sys.stderr)
         config[KEY_SIDEPANE_PERCENT_WIDTH] = DEFAULT_SIDEPANE_PERCENT_WIDTH
 
-    if not isinstance(config.get(KEY_MANAGED_SESSIONS), list):
-        if KEY_MANAGED_SESSIONS in config: # Value exists but is not a list
-            print(f"Warning: '{KEY_MANAGED_SESSIONS}' in {config_path or 'config'} is not a list. Initializing as empty list.", file=sys.stderr)
-        config[KEY_MANAGED_SESSIONS] = []
+    # Handle KEY_MANAGED_SESSIONS: ensure it's a dict, migrate from list if necessary
+    managed_sessions_data = config.get(KEY_MANAGED_SESSIONS)
+    if isinstance(managed_sessions_data, list):
+        # Migrate from old list format
+        print(f"Info: Migrating '{KEY_MANAGED_SESSIONS}' from list to dictionary format in configuration at {config_path or 'memory'}.", file=sys.stderr)
+        config[KEY_MANAGED_SESSIONS] = {name: {} for name in managed_sessions_data}
+    elif not isinstance(managed_sessions_data, dict):
+        if KEY_MANAGED_SESSIONS in config: # Value exists but is not a dict (and wasn't a list)
+            print(f"Warning: '{KEY_MANAGED_SESSIONS}' in {config_path or 'config'} is not a dictionary. Initializing as empty dictionary.", file=sys.stderr)
+        config[KEY_MANAGED_SESSIONS] = {}
+    # Ensure all session entries are dictionaries
+    for session_name, session_settings in config[KEY_MANAGED_SESSIONS].items():
+        if not isinstance(session_settings, dict):
+            print(f"Warning: Settings for session '{session_name}' in '{KEY_MANAGED_SESSIONS}' is not a dictionary. Resetting to empty.", file=sys.stderr)
+            config[KEY_MANAGED_SESSIONS][session_name] = {}
+
 
     if not isinstance(config.get(KEY_THEME_NAME), str):
         if KEY_THEME_NAME in config: # Value exists but is not a str
@@ -79,28 +91,45 @@ def load_config() -> dict:
     elif KEY_LLM_API_KEY not in config:
         config[KEY_LLM_API_KEY] = DEFAULT_LLM_API_KEY
 
-    # Ensure plan_generation_prompt_override_path is a string or None
-    if KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH in config and \
-       not (isinstance(config.get(KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH), str) or \
-            config.get(KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH) is None):
-        print(f"Warning: '{KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH}' in {config_path or 'config'} is not a string or null. Using default value.", file=sys.stderr)
+    # Ensure global plan_generation_prompt_override_path is a string or None and process it
+    global_prompt_path = config.get(KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH)
+    if global_prompt_path is not None and not isinstance(global_prompt_path, str):
+        print(f"Warning: Global '{KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH}' in {config_path or 'config'} is not a string or null. Using default value (None).", file=sys.stderr)
         config[KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH] = DEFAULT_PLAN_GENERATION_PROMPT_OVERRIDE_PATH
-    elif KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH not in config:
+    elif KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH not in config: # Not present at all
         config[KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH] = DEFAULT_PLAN_GENERATION_PROMPT_OVERRIDE_PATH
-    
-    # Ensure the path is absolute if provided, or None
-    if isinstance(config[KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH], str):
-        # Expand ~ and make absolute. If path is invalid, it will be handled by the consuming code.
-        expanded_path = os.path.expanduser(config[KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH])
-        if not os.path.isabs(expanded_path) and config[KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH]: # only if not empty string
-             # if not absolute, make it relative to the config file's directory if possible, else CWD
+
+    if isinstance(config.get(KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH), str):
+        path_val = config[KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH]
+        expanded_path = os.path.expanduser(path_val)
+        if not os.path.isabs(expanded_path) and path_val: # only if not empty string
             if config_path:
                 config[KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH] = os.path.abspath(os.path.join(os.path.dirname(config_path), expanded_path))
-            else: # if no config file, relative to CWD
+            else:
                 config[KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH] = os.path.abspath(expanded_path)
-        else: # it was already absolute or an empty string
+        else:
             config[KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH] = expanded_path
-
+    
+    # Process session-specific plan_generation_prompt_override_path
+    for session_name, session_settings in config.get(KEY_MANAGED_SESSIONS, {}).items():
+        if not isinstance(session_settings, dict): # Should have been handled already, but defensive
+            continue 
+        
+        session_prompt_path = session_settings.get(KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH)
+        if session_prompt_path is not None and not isinstance(session_prompt_path, str):
+            print(f"Warning: Session '{session_name}' '{KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH}' in {config_path or 'config'} is not a string or null. Ignoring session override.", file=sys.stderr)
+            if KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH in session_settings:
+                 del session_settings[KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH] # Remove invalid entry
+        elif isinstance(session_prompt_path, str):
+            expanded_path = os.path.expanduser(session_prompt_path)
+            if not os.path.isabs(expanded_path) and session_prompt_path: # only if not empty string
+                if config_path:
+                    session_settings[KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH] = os.path.abspath(os.path.join(os.path.dirname(config_path), expanded_path))
+                else:
+                    session_settings[KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH] = os.path.abspath(expanded_path)
+            else:
+                session_settings[KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH] = expanded_path
+            # No default for session-specific, it's either there and valid, or not used.
 
     return config
 
@@ -126,16 +155,35 @@ settings = load_config()
 
 
 def add_session_to_config(session_name: str) -> None:
-    """Adds a session name to the managed_sessions list in config and saves."""
-    if session_name not in settings.get(KEY_MANAGED_SESSIONS, []):
-        settings.setdefault(KEY_MANAGED_SESSIONS, []).append(session_name)
+    """Adds a session name to the managed_sessions dict in config and saves."""
+    managed_sessions_dict = settings.setdefault(KEY_MANAGED_SESSIONS, {})
+    if session_name not in managed_sessions_dict:
+        managed_sessions_dict[session_name] = {} # Add session with empty settings
         save_config(settings)
 
 def remove_session_from_config(session_name: str) -> None:
-    """Removes a session name from the managed_sessions list in config and saves."""
-    if session_name in settings.get(KEY_MANAGED_SESSIONS, []):
-        settings[KEY_MANAGED_SESSIONS].remove(session_name)
+    """Removes a session name from the managed_sessions dict in config and saves."""
+    managed_sessions_dict = settings.get(KEY_MANAGED_SESSIONS, {})
+    if session_name in managed_sessions_dict:
+        del managed_sessions_dict[session_name]
         save_config(settings)
+
+def get_plan_prompt_override_path(session_name: str | None = None) -> str | None:
+    """
+    Retrieves the plan generation prompt override path.
+    Checks session-specific config first, then global config.
+    Paths are assumed to be processed (absolute, expanded) by load_config.
+    """
+    if session_name:
+        session_config = settings.get(KEY_MANAGED_SESSIONS, {}).get(session_name)
+        if session_config and isinstance(session_config, dict):
+            # Path should already be processed by load_config if it exists
+            session_prompt_path = session_config.get(KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH)
+            if session_prompt_path is not None: # Can be empty string or a path
+                return session_prompt_path
+
+    # Fallback to global setting (also already processed by load_config)
+    return settings.get(KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH)
 
 def update_theme_in_config(theme_name: str) -> None:
     """Updates the theme name in config and saves."""

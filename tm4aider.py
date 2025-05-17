@@ -105,9 +105,12 @@ if __name__ == "__main__":
 
         # Original tmux session management logic starts here (now unreachable)
         # This code will only be reached if FeatureInputApp returns None (no plan generated/saved)
-        managed_sessions_from_config = config.settings.get(config.KEY_MANAGED_SESSIONS, [])
+        
+        managed_sessions_dict = config.settings.get(config.KEY_MANAGED_SESSIONS, {})
+        all_configured_session_names = list(managed_sessions_dict.keys())
+        
         active_managed_sessions = [
-            s_name for s_name in managed_sessions_from_config if tmux_utils.session_exists(s_name)
+            s_name for s_name in all_configured_session_names if tmux_utils.session_exists(s_name)
         ]
 
         if active_managed_sessions:
@@ -153,31 +156,27 @@ if __name__ == "__main__":
             SESSION_NAME = SESSION_NAME_FROM_SELECTOR # This is the final name to use
 
             # Ensure the final SESSION_NAME (selected, created, or renamed) is in config.
-            # Re-load config.settings as it might have been modified by remove/add operations.
-            current_config_sessions = config.settings.get("managed_sessions", [])
-            if SESSION_NAME not in current_config_sessions:
-                # This case handles newly created sessions (not renames of existing config items,
-                # as those are handled above by adding the new_name).
+            # config.settings would have been updated by add_session_to_config / remove_session_from_config
+            # if renames or creations happened that modified it.
+            current_managed_sessions_dict = config.settings.get(config.KEY_MANAGED_SESSIONS, {})
+            if SESSION_NAME not in current_managed_sessions_dict:
+                # This case handles newly created sessions (not renames of existing config items).
+                # Renames are handled by remove(old)/add(new) which updates config.settings.
+                # A session selected from selector_app.run() that was "Create New" path.
                 print(f"Adding new session '{SESSION_NAME}' to configuration.")
-                config.add_session_to_config(SESSION_NAME) 
+                config.add_session_to_config(SESSION_NAME) # This will save config
             else:
                 print(f"Using session '{SESSION_NAME}' (already in configuration or updated via rename).")
 
-        else: # No active managed sessions found in config, or config is empty/new
+        else: # No active managed sessions found from config, or config is empty/new
             print("No active managed sessions found. Proposing a new default session.")
-            # For simplicity, we'll use a fixed default name.
-            # If it already exists in tmux (but wasn't in our config or wasn't active),
-            # manage_tmux_session will handle it (e.g. by re-using or erroring if name collision strategy isn't robust)
-            # For now, let's assume manage_tmux_session will create if not exists.
             SESSION_NAME = DEFAULT_SESSION_BASENAME
             
-            # Check if this default name is already in tmux but not in our config (e.g. user created it manually)
-            # If we want to ensure it's *our* session, we might need more complex naming or checking.
-            # For now, if it's not in config, add it. manage_tmux_session will create if it doesn't exist at all.
-            if SESSION_NAME not in managed_sessions_from_config:
+            current_managed_sessions_dict = config.settings.get(config.KEY_MANAGED_SESSIONS, {})
+            if SESSION_NAME not in current_managed_sessions_dict:
                  print(f"Default session '{SESSION_NAME}' will be created and added to config.")
-                 config.add_session_to_config(SESSION_NAME)
-            else: # It was in config, but not active. We'll try to use/recreate it.
+                 config.add_session_to_config(SESSION_NAME) # This will save config
+            else: # It was in config (e.g. as a key in managed_sessions_dict), but not active. We'll try to use/recreate it.
                  print(f"Using session from config (currently inactive): {SESSION_NAME}")
 
 
