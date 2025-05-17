@@ -38,6 +38,7 @@ class Sidebar(App):
     #plan_sections_container {
         padding: 1 0; /* Add some padding around the sections */
         /* Rely on default height for Vertical widget (auto) */
+        align-vertical: start; /* Align children (labels, button rows) to the top */
     }
     #plan_sections_container Label {
         margin: 0 0 0 0; /* Margin for section titles */
@@ -60,6 +61,7 @@ class Sidebar(App):
     #plan_collapsible > .collapsible-content {
         /* This is the Vertical widget that holds the Select and plan_sections_container. */
         /* Rely on default height for Vertical widget (auto) */
+        align-vertical: start; /* Align children (Select, plan_sections_container) to the top */
     }
     """
 
