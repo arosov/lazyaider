@@ -1,7 +1,7 @@
 import subprocess # Still needed for CalledProcessError
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, VerticalScroll
-from textual.widgets import Button, Footer, Header, Static
+from textual.widgets import Button, Footer, Header, Static, Collapsible
 from tm4aider import tmux_utils
 
 class Sidebar(App):
@@ -23,13 +23,8 @@ class Sidebar(App):
         border-left: thick $primary-background-darken-2;
         background: $primary-background-lighten-1; /* Slightly different background for sidebar */
     }
-    .sidebar-title {
-        padding-bottom: 1;
-        text-align: center;
-        text-style: bold;
-        color: $text;
-    }
-    #sidebar > Button { /* Style buttons directly under sidebar */
+    /* .sidebar-title is removed as Collapsible provides its own title */
+    #sidebar Collapsible Button { /* Style buttons inside Collapsible within #sidebar */
         width: 100%;
         margin-bottom: 1;
     }
@@ -78,10 +73,10 @@ class Sidebar(App):
         with Horizontal(id="main_layout"):
             # Terminal widget removed
             with VerticalScroll(id="sidebar"):
-                yield Static("Controls", classes="sidebar-title")
-                yield Button("Start Aider", id="btn_start_aider", variant="success")
-                yield Button("Detach Session", id="btn_detach_session", variant="primary")
-                yield Button("Destroy Session", id="btn_quit_session", variant="error")
+                with Collapsible(title="Controls", collapsed=False):
+                    yield Button("Start Aider", id="btn_start_aider", variant="success")
+                    yield Button("Detach Session", id="btn_detach_session", variant="primary")
+                    yield Button("Destroy Session", id="btn_quit_session", variant="error")
         yield Footer()
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
