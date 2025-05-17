@@ -17,12 +17,10 @@ class Sidebar(App):
         layout: vertical;
     }
     Horizontal#main_layout {
-        height: 1fr; /* Make Horizontal fill available vertical space between Header and Footer */
         background: $primary-background-lighten-1; /* Slightly different background for sidebar */
     }
     #sidebar {
         width: 100%;
-        height: 1fr; /* Make VerticalScroll fill the height of its parent (main_layout) */
         padding: 1;
         border-left: thick $primary-background-darken-2;
         background: $primary-background-lighten-1; /* Slightly different background for sidebar */
@@ -37,25 +35,29 @@ class Sidebar(App):
         margin-right: 4;
     }
     #plan_sections_container {
-        padding: 1 0; /* Add some padding around the sections */
+        padding: 0 0; /* Add some padding around the sections */
         height: auto; /* Explicitly wrap content */
         /* Grid properties for a single column layout where rows wrap content */
         grid-size: 1; /* Defines one column */
         grid-rows: auto; /* Each row takes the height of its content */
     }
     #plan_sections_container Label {
-        margin: 0 0 0 0; /* Margin for section titles */
+        margin: 1 0 0 0; /* Margin for section titles */
         text-style: italic;
         width: 100%; /* Ensure label wraps within its container */
+        height: auto; /* Explicitly wrap content (label + buttons horizontal) */
     }
     #plan_sections_container Horizontal {
         align: left top;
         margin: 0 0 0 0; /* Margin for button groups */
+        height: auto; /* Explicitly wrap content (label + buttons horizontal) */
+    }
+    .plan_section_item_container {
     }
     .plan_section_item_container {
         height: auto; /* Explicitly wrap content (label + buttons horizontal) */
         align: left top; /* Align label and buttons horizontal to the top-left */
-        margin-bottom: 1; /* Add some space between plan items */
+        margin-bottom: 0; /* Add some space between plan items */
     }
     .plan_action_button {
         margin-right: 0; /* Space between action buttons */
