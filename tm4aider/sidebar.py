@@ -58,6 +58,10 @@ class Sidebar(App):
     TMUX_SESSION_NAME: str | None = None
     APP_CONFIG: dict | None = None # To hold the loaded config settings
 
+    # For storing currently loaded plan details
+    current_plan_markdown_content: str | None = None
+    current_selected_plan_name: str | None = None
+
     def __init__(self):
         super().__init__()
         # Theme will be set in on_mount
@@ -157,6 +161,63 @@ class Sidebar(App):
         sections = re.findall(r"^## (.*)", markdown_content, re.MULTILINE)
         return sections
 
+    def _get_section_content_by_index(self, section_index: int) -> str | None:
+        """
+        Extracts the content of a specific markdown section by its index.
+        A section is defined by a "## Title" header.
+        """
+        if not self.current_plan_markdown_content:
+            self.log.warning("No plan content loaded to extract section from.")
+            return None
+
+        # Find all section headers with their start positions
+        headers = list(re.finditer(r"^## .*", self.current_plan_markdown_content, re.MULTILINE))
+
+        if not 0 <= section_index < len(headers):
+            self.log.error(f"Section index {section_index} is out of bounds (0-{len(headers)-1}).")
+            return None
+
+        section_header_match = headers[section_index]
+        # Content starts after the header line
+        content_start_pos = section_header_match.end()
+        # Content ends at the start of the next header, or at the end of the document
+        if section_index + 1 < len(headers):
+            next_header_match = headers[section_index + 1]
+            content_end_pos = next_header_match.start()
+        else:
+            content_end_pos = len(self.current_plan_markdown_content)
+
+        # Extract the content, strip leading/trailing whitespace from the section block
+        section_content = self.current_plan_markdown_content[content_start_pos:content_end_pos].strip()
+        return section_content
+
+    def _extract_file_paths(self, text: str) -> list[str]:
+        """
+        Extracts potential file paths from a string.
+        This regex looks for sequences like 'path/to/file.ext' or 'file.ext'.
+        It's a best-effort extraction and might not capture all valid paths or might capture non-paths.
+        """
+        # Regex to find file paths:
+        # - (?:[a-zA-Z0-9_.-]+/)* : Optional directory structure (e.g., "dir1/dir2/")
+        # - [a-zA-Z0-9_.-]+       : File name part
+        # - \.                    : Literal dot for extension
+        # - [a-zA-Z0-9_.-]+       : File extension part
+        # Wrapped in `[\s\`'\"\(]` and `[\s\`'\"\,\.\)]?` to avoid capturing these as part of the path
+        # and to allow paths to be at the start/end of lines or surrounded by common delimiters.
+        # The actual path is in group 1.
+        # Adjusted to be less greedy and more specific to typical file path characters.
+        # This regex is simplified and may not cover all edge cases or complex file names.
+        path_regex = r"[\s`'\"\(]?((?:[a-zA-Z0-9_.\-\+\%]+\/)*[a-zA-Z0-9_.\-\+\%]+\.[a-zA-Z0-9_.\-\+\%]+)[\s`'\"\,\.\!\?\)]?"
+        potential_paths = re.findall(path_regex, text)
+        
+        # Further clean up: sometimes paths might be captured with a trailing quote or parenthesis if not handled by the context.
+        # For now, we rely on the regex group 1 to capture the core path.
+        # Also, remove duplicates and ensure they are actual strings.
+        unique_paths = sorted(list(set(str(p) for p in potential_paths if isinstance(p, str))))
+        self.log(f"Extracted potential paths: {unique_paths}")
+        return unique_paths
+
+
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button press events from the sidebar."""
         button_id = event.button.id
@@ -209,17 +270,105 @@ class Sidebar(App):
             parts = button_id.split("_")
             try:
                 section_index = int(parts[2])
-                action_type = parts[3]
-                # We would need to retrieve the actual section title if needed for the action
-                # For now, just log with index
-                self.log(f"Plan section button pressed: Section Index {section_index}, Action: {action_type}")
-                # Placeholder for actual action:
-                # if action_type == "ask":
-                #     self.log(f"TODO: Implement 'ask' for section {section_index}")
-                # elif action_type == "code":
-                #     self.log(f"TODO: Implement 'code' for section {section_index}")
-                # elif action_type == "arch":
-                #     self.log(f"TODO: Implement 'arch' for section {section_index}")
+                action_type = parts[3] # "ask", "code", or "arch"
+                self.log(f"Plan section button: Index {section_index}, Action: {action_type}")
+
+                if not self.TMUX_TARGET_PANE:
+                    self.log.warning("TMUX_TARGET_PANE not set. Cannot send section to Aider.")
+                    return
+
+                if not self.current_plan_markdown_content:
+                    self.log.warning("No plan content loaded. Cannot process section action.")
+                    return
+
+                section_content = self._get_section_content_by_index(section_index)
+
+                if section_content is None:
+                    self.log.error(f"Could not retrieve content for section index {section_index}.")
+                    return
+
+                # Extract file paths from the section content
+                potential_file_paths = self._extract_file_paths(section_content)
+                existing_files = []
+                if potential_file_paths:
+                    for p_path_str in potential_file_paths:
+                        # Check relative to CWD, which is typical for Aider
+                        # Aider usually runs from the project root.
+                        if Path(p_path_str).exists() and Path(p_path_str).is_file():
+                            existing_files.append(p_path_str)
+                        else:
+                            self.log(f"File path '{p_path_str}' from plan section does not exist or is not a file.")
+                
+                if existing_files:
+                    files_to_add_str = " ".join(existing_files)
+                    add_command = f"/add {files_to_add_str}"
+                    try:
+                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, add_command)
+                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter")
+                        self.log(f"Sent to Aider: {add_command}")
+                    except Exception as e:
+                        self.log.error(f"Error sending /add command to tmux: {e}")
+                        return # Stop if we can't add files
+
+                # Determine the Aider command prefix
+                aider_command_prefix = f"/{action_type} " # e.g., "/ask ", "/code ", "/architect "
+                
+                # Send the section content prefixed with the command
+                # Ensure the content is sent as a single block, handling newlines appropriately.
+                # tmux send-keys will interpret newlines in the string as separate "Enter" presses
+                # if not handled. However, for Aider, we usually want to paste the whole block.
+                # Aider's /ask, /code, etc. usually take the rest of the line as input.
+                # If the section_content has newlines, it might be better to send it in a way
+                # that Aider can consume it, e.g. by replacing newlines with spaces for a single-line prompt,
+                # or by ensuring Aider is in a state to accept multi-line input if that's how it works.
+                # For now, let's assume Aider's /ask, /code, /architect commands can handle the content as is,
+                # and newlines within the content will be part of the prompt.
+                # Aider typically expects the prompt on a single line after the command.
+                # Let's replace newlines with spaces to make it a single line prompt.
+                # This might lose formatting, but is safer for Aider's command parsing.
+                # Alternatively, one could send the command, then paste the content, then send Enter.
+                # For simplicity, let's try sending it as one line first.
+                
+                # To send multi-line content to Aider, it's often better to use /edit or rely on
+                # Aider's ability to read from a temp file or clipboard.
+                # Sending raw newlines via send-keys can be problematic.
+                # Let's send the command and then the content separately, allowing tmux to handle it.
+                # This is still tricky. Aider's /ask, /code, /architect are single-line.
+                # The best approach for multi-line content with these commands is often to instruct the user
+                # to paste it, or to use a different Aider feature.
+                # Given the request, we will send the command and then the content.
+                # This implies the content should be on the same "line" as the command for Aider.
+                # So, we should probably make section_content a single line.
+                
+                # Let's reconsider: Aider's /ask, /code, /architect commands take the rest of the line as the prompt.
+                # If section_content has newlines, it will break.
+                # The most straightforward way is to make section_content a single line.
+                # However, the user asked to "send the rest of the markdown content of the section".
+                # This implies preserving it.
+                # A common pattern for sending multi-line text to a CLI via tmux is to use a heredoc or paste.
+                # Aider doesn't directly support heredocs for these commands.
+                #
+                # Let's assume for now that the user wants the raw section content sent, and will deal with
+                # Aider's interpretation. We will send the command, then the content, then Enter.
+                # This means the content will appear on a new line after the command in the terminal.
+                # This is NOT how /ask, /code, /architect work. They expect the prompt on the same line.
+                #
+                # The request: "Then send the rest of the markdown content of the section using /ask /code or /architect as a prefix according to the button."
+                # This strongly implies: `/ask <content_here>`
+                # So, the content MUST be on one line or escaped.
+                # Let's replace newlines with a space for the prompt.
+                        
+                prompt_content = section_content.replace('\n', ' ')
+                        
+                full_aider_command = f"{aider_command_prefix}{prompt_content}"
+
+                try:
+                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, full_aider_command)
+                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter")
+                    self.log(f"Sent to Aider: {aider_command_prefix}...") # Log truncated for brevity
+                    self.log(f"Full command sent (first 100 chars): {full_aider_command[:100]}")
+                except Exception as e:
+                    self.log.error(f"Error sending section content to tmux: {e}")
 
             except (IndexError, ValueError) as e:
                 self.log.error(f"Error parsing plan section button ID '{button_id}': {e}")
@@ -234,39 +383,42 @@ class Sidebar(App):
             await plan_sections_container.remove_children()
 
             if event.value is not Select.BLANK and event.value is not None:
-                selected_plan_name = str(event.value)
-                self.log(f"Plan selected: {selected_plan_name}.")
+                self.current_selected_plan_name = str(event.value) # Store selected plan name
+                self.log(f"Plan selected: {self.current_selected_plan_name}.")
 
                 # Save selected plan to config
                 if self.TMUX_SESSION_NAME:
                     from tm4aider import config as app_config_module # late import
-                    app_config_module.update_session_active_plan_name(self.TMUX_SESSION_NAME, selected_plan_name)
-                    self.log(f"Saved active plan '{selected_plan_name}' for session '{self.TMUX_SESSION_NAME}' to config.")
+                    app_config_module.update_session_active_plan_name(self.TMUX_SESSION_NAME, self.current_selected_plan_name)
+                    self.log(f"Saved active plan '{self.current_selected_plan_name}' for session '{self.TMUX_SESSION_NAME}' to config.")
                 else:
                     self.log.warning("TMUX_SESSION_NAME not set. Cannot save active plan to config.")
 
                 tm4aider_dir_name = ".tm4aider"
                 plans_subdir_name = "plans"
-                plan_dir_path = Path(tm4aider_dir_name) / plans_subdir_name / selected_plan_name
+                plan_dir_path = Path(tm4aider_dir_name) / plans_subdir_name / self.current_selected_plan_name
 
                 # Construct the expected markdown file name based on the plan directory name
-                expected_markdown_filename = f"{selected_plan_name}.md"
+                expected_markdown_filename = f"{self.current_selected_plan_name}.md"
                 markdown_file_path = plan_dir_path / expected_markdown_filename
 
                 if not markdown_file_path.is_file():
                     self.log.error(f"Markdown file not found: {markdown_file_path}")
+                    self.current_plan_markdown_content = None # Clear content if file not found
+                    self.current_selected_plan_name = None # Clear name
                     # Mount a message indicating the specific file was not found
-                    await plan_sections_container.mount(Label(f"File '{expected_markdown_filename}' not found in '{selected_plan_name}'."))
+                    await plan_sections_container.mount(Label(f"File '{expected_markdown_filename}' not found in '{self.current_selected_plan_name or 'selected plan'}'."))
                     return
 
                 self.log(f"Loading plan from: {markdown_file_path}")
 
                 try:
-                    markdown_content = markdown_file_path.read_text(encoding="utf-8")
-                    section_titles = self._parse_markdown_sections(markdown_content)
+                    self.current_plan_markdown_content = markdown_file_path.read_text(encoding="utf-8") # Store content
+                    section_titles = self._parse_markdown_sections(self.current_plan_markdown_content)
 
                     if not section_titles:
                         await plan_sections_container.mount(Label("No sections (## Title) found in plan."))
+                        # Keep self.current_plan_markdown_content as it's valid, just no sections
                         return
 
                     for i, title in enumerate(section_titles):
@@ -283,14 +435,18 @@ class Sidebar(App):
                         # Now that buttons_container is mounted, mount its children
                         await buttons_container.mount_all([ask_button, code_button, arch_button])
 
-                    self.log(f"Displayed {len(section_titles)} sections for plan '{selected_plan_name}'.")
+                    self.log(f"Displayed {len(section_titles)} sections for plan '{self.current_selected_plan_name}'.")
 
                 except Exception as e:
                     self.log.error(f"Error loading or parsing plan file {markdown_file_path}: {e}")
+                    self.current_plan_markdown_content = None # Clear on error
+                    self.current_selected_plan_name = None
                     await plan_sections_container.mount(Label(f"Error loading plan: {e}"))
 
             else: # Plan selection cleared or event.value is None/BLANK
                 self.log("Plan selection cleared.")
+                self.current_plan_markdown_content = None # Clear stored content
+                self.current_selected_plan_name = None # Clear stored name
                 # Children already cleared at the start of the handler
 
                 # Clear selected plan from config
