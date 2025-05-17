@@ -58,9 +58,8 @@ class Sidebar(App):
         /* Explicitly setting it might not be necessary or could interfere. */
     }
     #plan_collapsible > .collapsible-content {
-        /* Target the internal content container of our specific Collapsible. */
-        /* This container is typically a Vertical widget. */
-        height: auto; /* Ensure this internal part also wraps its children. */
+        /* This is a Vertical widget, which defaults to height: auto. */
+        /* Relying on the default behavior. */
     }
     """
 
