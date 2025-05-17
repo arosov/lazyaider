@@ -54,12 +54,11 @@ class Sidebar(App):
         padding: 0 0; /* Reduce inner padding: 0 for top/bottom, 1 for left/right */
     }
     #plan_collapsible {
-        /* The Collapsible widget itself defaults to height: auto. */
-        /* Explicitly setting it might not be necessary or could interfere. */
+        height: auto; /* Ensure the Collapsible itself wraps its content. */
     }
     #plan_collapsible > .collapsible-content {
-        /* This is a Vertical widget, which defaults to height: auto. */
-        /* Relying on the default behavior. */
+        /* This is the Vertical widget that holds the Select and plan_sections_container. */
+        height: auto; /* Ensure this internal part also wraps its children. */
     }
     """
 
