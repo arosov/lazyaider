@@ -218,7 +218,7 @@ class Sidebar(App):
                     # Mount a message indicating the specific file was not found
                     await plan_sections_container.mount(Label(f"File '{expected_markdown_filename}' not found in '{selected_plan_name}'."))
                     return
-                
+
                 self.log(f"Loading plan from: {markdown_file_path}")
 
                 try:
