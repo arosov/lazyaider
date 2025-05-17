@@ -512,21 +512,21 @@ class Sidebar(App):
 
                     for i, title in enumerate(section_titles):
                         section_label = Label(f"{title.strip()}")
-                        buttons_container = Horizontal()
                         ask_button = Button("ask", id=f"plan_sec_{i}_ask", classes="plan_action_button")
                         code_button = Button("code", id=f"plan_sec_{i}_code", classes="plan_action_button")
                         arch_button = Button("arch", id=f"plan_sec_{i}_arch", classes="plan_action_button")
 
-                        # Create a Vertical container for this specific section item
-                        section_item_container = Vertical(classes="plan_section_item_container")
+                        # Define children when creating the Horizontal container
+                        buttons_container = Horizontal(ask_button, code_button, arch_button)
 
-                        # Mount the label and buttons container into this new item container
-                        await section_item_container.mount(section_label)
-                        await section_item_container.mount(buttons_container)
-                        # Mount the buttons into their container
-                        await buttons_container.mount_all([ask_button, code_button, arch_button])
+                        # Define children when creating the Vertical container for the section item
+                        section_item_container = Vertical(
+                            section_label,
+                            buttons_container,
+                            classes="plan_section_item_container"
+                        )
 
-                        # Mount the item container into the main plan sections container
+                        # Mount the fully constructed item container into the main plan sections container
                         await plan_sections_container.mount(section_item_container)
 
                     self.log(f"Displayed {len(section_titles)} sections for plan '{self.current_selected_plan_name}'.")
