@@ -3,7 +3,7 @@ from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, VerticalScroll
 from textual.widgets import Button, Footer, Header, Static, Collapsible, Select
-from textual.widgets.select import SelectOption # Explicit import for clarity
+# SelectOption import removed
 from tm4aider import tmux_utils
 
 class Sidebar(App):
@@ -68,7 +68,7 @@ class Sidebar(App):
         if plans_base_path.is_dir():
             for item in sorted(plans_base_path.iterdir()): # Sort for consistent order
                 if item.is_dir():
-                    plan_options.append(SelectOption(item.name, item.name)) # Display name and value are the same
+                    plan_options.append((item.name, item.name)) # Use a tuple (text, value)
         
         if plan_options:
             load_plan_select.set_options(plan_options)
