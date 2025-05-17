@@ -50,6 +50,7 @@ class Sidebar(App):
     .plan_action_button {
         margin-right: 0; /* Space between action buttons */
         min-width: 8; /* Removed as auto width is desired */
+        padding: 0 1; /* Reduce inner padding: 0 for top/bottom, 1 for left/right */
     }
     """
 
