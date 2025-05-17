@@ -1,9 +1,10 @@
 import functools
 import time # Add this import
 import re # Add this import
+import shutil # Add this import
 from textual.app import App, ComposeResult
 from textual.containers import Vertical, Horizontal
-from textual.widgets import Header, Footer, Button, Static, TextArea, LoadingIndicator
+from textual.widgets import Header, Footer, Button, Static, TextArea, LoadingIndicator, RadioSet, RadioButton # Add RadioSet, RadioButton
 from textual.worker import Worker
 from textual.timer import Timer # Add this import
 
@@ -35,6 +36,7 @@ class FeatureInputApp(App[tuple[str, str] | None]):
         self._llm_worker: Worker | None = None
         self._llm_call_start_time: float | None = None # Renamed to avoid conflict
         self._loading_timer: Timer | None = None
+        self.repomix_available: bool = False # To track if repomix is available
 
 
     def compose(self) -> ComposeResult:
@@ -50,6 +52,9 @@ class FeatureInputApp(App[tuple[str, str] | None]):
                     soft_wrap=True,
                 )
                 with Horizontal(id="feature_buttons_container", classes="button-container"):
+                    with RadioSet(id="repomap_method_radioset"):
+                        yield RadioButton("Aider's repomap", id="radio_aider_repomap", value="aider")
+                        yield RadioButton("Repomix like a savage", id="radio_repomix", value="repomix")
                     yield Button("Generate Plan", variant="primary", id="generate_plan_button")
                     yield Button("Cancel", variant="error", id="cancel_initial_button")
 
@@ -114,6 +119,16 @@ class FeatureInputApp(App[tuple[str, str] | None]):
                 print(f"Warning: Failed to set theme '{theme_name_from_config}': {e}. Falling back to default.", file=sys.stderr)
                 self.dark = config.DEFAULT_THEME_NAME == "dark"
 
+        # Check for repomix availability and configure RadioButton
+        repomix_path = shutil.which("repomix")
+        self.repomix_available = repomix_path is not None
+        radio_repomix_button = self.query_one("#radio_repomix", RadioButton)
+        if not self.repomix_available:
+            radio_repomix_button.disabled = True
+            radio_repomix_button.label = "Repomix (not found)" # Update label
+        
+        # Set default selection for RadioSet
+        self.query_one("#repomap_method_radioset", RadioSet).value = "aider"
 
         self._set_ui_state(self.STATE_INPUT_FEATURE)
 
@@ -184,7 +199,8 @@ class FeatureInputApp(App[tuple[str, str] | None]):
             if self._llm_worker is not None: # Should not happen, but good practice
                 await self._llm_worker.cancel()
 
-            bound_call_generate_plan = functools.partial(self._call_generate_plan, description)
+            selected_repomap_method = self.query_one("#repomap_method_radioset", RadioSet).value
+            bound_call_generate_plan = functools.partial(self._call_generate_plan, description, selected_repomap_method)
             self._llm_worker = self.run_worker(bound_call_generate_plan, thread=True)
 
         elif button_id == "cancel_initial_button":
@@ -200,12 +216,12 @@ class FeatureInputApp(App[tuple[str, str] | None]):
         elif button_id == "discard_plan_button":
             self.exit(None) # Exit without a plan
 
-    def _call_generate_plan(self, description: str) -> None:
+    def _call_generate_plan(self, description: str, repomap_method: str) -> None:
         """Synchronous wrapper to call generate_plan and then update UI from thread."""
         try:
             # generate_plan now returns a tuple (plan_content, model_name, token_count) or an error string
             # Since FeatureInputApp runs before session selection, session_name is None.
-            plan_data = generate_plan(description, session_name=None)
+            plan_data = generate_plan(description, session_name=None, repomap_method=repomap_method)
             self.call_from_thread(self._handle_plan_generation_result, plan_data)
         except Exception as e:
             # This catch is for unexpected errors in the _call_generate_plan itself,

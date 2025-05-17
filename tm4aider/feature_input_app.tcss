@@ -79,6 +79,10 @@ TextArea.-error-border {
     border-title-style: bold;
 }
 
+#repomap_method_radioset {
+    margin-right: 2; /* Space between RadioSet and the Generate Plan button */
+    /* RadioSet arranges its RadioButtons vertically by default */
+}
 
 .button-container {
     width: 100%; /* Ensure container takes full width for centering its children */
