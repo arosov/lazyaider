@@ -37,6 +37,7 @@ class Sidebar(App):
     }
     #plan_sections_container {
         padding: 1 0; /* Add some padding around the sections */
+        height: auto; /* Explicitly wrap content */
     }
     #plan_sections_container Label {
         margin: 0 0 0 0; /* Margin for section titles */
@@ -57,7 +58,7 @@ class Sidebar(App):
     }
     #plan_collapsible > .collapsible-content {
         /* This is the Vertical widget that holds the Select and plan_sections_container. */
-        /* height: 100%; */
+        height: auto; /* Explicitly wrap content */
     }
     """
 
