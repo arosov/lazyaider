@@ -384,20 +384,26 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
             # Use the utility function from tmux_utils
             # It's configured to not check=True by default, so we check returncode manually.
             # text=True implies utf-8 for capture_output.
+            # When launching an interactive command like an editor in a new tmux window,
+            # capturing output can sometimes interfere with TTY handling or hide issues.
+            # We'll set capture_output=False and rely on the exit code for error detection.
             process = run_command_in_new_window_and_wait(
                 window_name="TM4Aider-Edit",
                 command_to_run=full_editor_command_for_tmux,
-                capture_output=True,
-                text=True,
+                capture_output=False, # Changed from True
+                text=True, # Still useful for command_to_run encoding if ever needed by subprocess internals
                 check=False # Explicitly False to match original logic of checking returncode
             )
 
             if process.returncode != 0:
-                error_message = f"External editor process error (code {process.returncode})."
-                if process.stderr:
-                    error_message += f"\nStderr: {process.stderr.strip()}"
-                if process.stdout:
-                    error_message += f"\nStdout: {process.stdout.strip()}" # Some editors output to stdout on error
+                # Since capture_output is False, process.stdout and process.stderr will be None.
+                # Provide a more generic error message based on the exit code.
+                error_message = (
+                    f"External editor process exited with error code {process.returncode}. "
+                    "If the editor didn't open or an error occurred, "
+                    "check your 'text_editor' command in '.tm4aider.conf.yml' "
+                    "and ensure the editor works correctly from a manual tmux new-window."
+                )
                 self.call_from_thread(self.notify, error_message, title="Editor Error", severity="error", timeout=10)
                 self.call_from_thread(self._update_text_area_from_external, None) # Signal no update
                 return
