@@ -44,6 +44,7 @@ class Sidebar(App):
     }
     #reset_switch_container Label {
         margin-left: 1; /* Space between switch and label */
+        margin-top: 1; /* Space between switch and label */
         width: auto; /* Shrink to fit content */
     }
     #plan_sections_container {
@@ -167,7 +168,7 @@ class Sidebar(App):
                     restored_selection = True
                 elif active_plan_name_from_config: # Configured plan not found
                     self.log.warning(f"Plan '{active_plan_name_from_config}' from config for session '{self.TMUX_SESSION_NAME}' not found in available plans. Ignoring.")
-            
+
             if not restored_selection and load_plan_select.value is not Select.BLANK and previous_selected_value not in available_plan_values:
                 # If a previous selection existed but is no longer valid, and no other selection was made,
                 # explicitly set to BLANK to trigger on_select_changed for clearing.
@@ -181,7 +182,7 @@ class Sidebar(App):
             load_plan_select.prompt = "No plans available"
             load_plan_select.refresh() # Explicitly refresh the widget
             self.log(f"No plan directories found in {plans_base_path}. 'Load plan' select disabled.")
-            
+
             if current_value_before_clear is not Select.BLANK:
                 # If a plan was selected, and now there are no plans, its value will become BLANK.
                 # Setting .value to BLANK explicitly ensures on_select_changed is triggered.
@@ -361,7 +362,7 @@ class Sidebar(App):
             command_to_run = "python plan_generator.py" # Use top-level script
             target_window_specifier = f"{self.TMUX_SESSION_NAME}:{plan_generator_window_name}"
             # Pane 0 is the default initial pane in a new window
-            target_pane_for_keys = f"{target_window_specifier}.0" 
+            target_pane_for_keys = f"{target_window_specifier}.0"
 
             try:
                 # Try to select the window. If successful, it exists and is now active.
@@ -374,7 +375,7 @@ class Sidebar(App):
                     self.log.info(f"Window '{plan_generator_window_name}' does not exist. Creating new window and running command.")
                     # Create the window, run the command in it, and select it (default behavior of create_window).
                     tmux_utils.create_window(self.TMUX_SESSION_NAME, plan_generator_window_name, command_to_run, select=True)
-                
+
                 self.log.info(f"Successfully initiated plan generator in window '{plan_generator_window_name}'.")
 
             except FileNotFoundError:
