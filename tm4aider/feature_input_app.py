@@ -381,88 +381,72 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
             quoted_temp_file_path = f"'{temp_file_path.replace("'", "'\\''")}'" # Basic POSIX sh quoting
             full_editor_command_for_tmux = f"{editor_cmd} {quoted_temp_file_path}"
 
+            session_name = None
+            try:
+                # Determine current tmux session name
+                result = subprocess.run(["tmux", "display-message", "-p", "#S"], capture_output=True, text=True, check=True, encoding="utf-8")
+                session_name = result.stdout.strip()
+            except (subprocess.CalledProcessError, FileNotFoundError) as e:
+                self.call_from_thread(self.notify, f"Could not determine tmux session name: {e}", title="TMUX Error", severity="error")
+                self.call_from_thread(self._update_text_area_from_external, None)
+                return # Abort if session name cannot be found
+
+            editor_window_name = "TM4Aider-ExternalEdit"
+            target_window_specifier = f"{session_name}:{editor_window_name}"
+            target_pane_for_keys = f"{target_window_specifier}.0" # Assuming first pane
+
             # For debugging, show the command that will be run
-            tmux_final_args_for_subprocess = ["tmux", "new-window", "-W", "-n", "TM4Aider-Edit", full_editor_command_for_tmux]
             self.call_from_thread(
                 self.notify,
-                f"Tmux command to run:\n{tmux_final_args_for_subprocess}",
-                title="Debug: Editor Command",
-                timeout=15 # Longer timeout to allow copying
+                (f"Session: {session_name}\n"
+                 f"Target Window: {editor_window_name}\n"
+                 f"Editor CMD: {full_editor_command_for_tmux}"),
+                title="Debug: External Editor Launch",
+                timeout=15
             )
             
-            # Use the utility function from tmux_utils
-            # It's configured to not check=True by default, so we check returncode manually.
-            # text=True implies utf-8 for capture_output.
-            # When launching an interactive command like an editor in a new tmux window,
-            # capturing output can sometimes interfere with TTY handling or hide issues.
-            # We'll set capture_output=False and rely on the exit code for error detection.
-            process = run_command_in_new_window_and_wait(
-                window_name="TM4Aider-Edit",
-                command_to_run=full_editor_command_for_tmux,
-                capture_output=False,
-                text=True,
-                check=False
-            )
+            # Launch logic similar to plan_generator in sidebar
+            if tmux_utils.select_window(target_window_specifier):
+                self.call_from_thread(self.notify, f"Editor window '{editor_window_name}' exists. Sending command.", title="External Edit Info")
+                tmux_utils.send_keys_to_pane(target_pane_for_keys, full_editor_command_for_tmux)
+                tmux_utils.send_keys_to_pane(target_pane_for_keys, "Enter")
+            else:
+                self.call_from_thread(self.notify, f"Editor window '{editor_window_name}' does not exist. Creating.", title="External Edit Info")
+                tmux_utils.create_window(session_name, editor_window_name, full_editor_command_for_tmux, select=True)
 
-            # After the editor process, check the temp file and exit code
-            temp_file_still_exists = os.path.exists(temp_file_path)
+            # CRITICAL: The application no longer waits for the editor.
+            # The following logic will execute immediately.
+            # This means changes from the editor will likely NOT be captured.
+            
             updated_text_content = None
+            if os.path.exists(temp_file_path):
+                try:
+                    with open(temp_file_path, "r", encoding="utf-8") as tmpfile_read:
+                        updated_text_content = tmpfile_read.read()
+                    # Optionally notify that content was read, but it's likely original content
+                    # self.call_from_thread(self.notify, "Attempted to read from temp file.", title="File Read")
+                except Exception as e_read:
+                    read_error_msg = f"Could not read temp file '{temp_file_path}': {e_read}"
+                    self.call_from_thread(self.notify, read_error_msg, title="File Read Error", severity="error")
+            else:
+                # This case is less likely now since we don't wait for an external process that might delete it.
+                # However, if the temp file creation itself failed earlier (though unlikely to reach here).
+                missing_file_msg = f"Temporary edit file '{temp_file_path}' not found after attempting to launch editor."
+                self.call_from_thread(self.notify, missing_file_msg, title="File Not Found", severity="warning")
 
-            if process.returncode != 0:
-                error_message = (
-                    f"External editor exited with code {process.returncode}. "
-                    "Some editors (e.g., Vim with ':cq') use non-zero exit codes to signal issues. "
-                )
-                if not temp_file_still_exists:
-                    error_message += "\nAdditionally, the temporary edit file is now missing. Changes were likely lost."
-                    self.call_from_thread(self.notify, error_message, title="Editor Warning/Error", severity="warning", timeout=10)
-                    # No content to load, updated_text_content remains None
-                else:
-                    # File exists, attempt to read it despite non-zero exit code.
-                    # Append a suggestion to check editor behavior to the base error_message.
-                    error_message += "Please check your editor's behavior regarding exit codes. Attempting to load content."
-                    self.call_from_thread(self.notify, error_message, title="Editor Information", severity="information", timeout=10)
-                    try:
-                        with open(temp_file_path, "r", encoding="utf-8") as tmpfile_read:
-                            updated_text_content = tmpfile_read.read()
-                    except Exception as e_read:
-                        read_error_msg = f"Editor exited with {process.returncode}. Could not read temp file: {e_read}"
-                        self.call_from_thread(self.notify, read_error_msg, title="Editor File Read Error", severity="error", timeout=10)
-                        # Content could not be read, updated_text_content remains None
-            else: # process.returncode == 0 (editor exited cleanly)
-                if not temp_file_still_exists:
-                    # This is unexpected if editor exited cleanly
-                    missing_file_msg = "Editor exited cleanly, but the temporary edit file is missing. Changes may have been lost."
-                    self.call_from_thread(self.notify, missing_file_msg, title="Editor Warning", severity="warning", timeout=10)
-                    # No content to load, updated_text_content remains None
-                else:
-                    try:
-                        with open(temp_file_path, "r", encoding="utf-8") as tmpfile_read:
-                            updated_text_content = tmpfile_read.read()
-                    except Exception as e_read:
-                        read_error_msg = f"Could not read temp file after editor exit: {e_read}"
-                        self.call_from_thread(self.notify, read_error_msg, title="File Read Error", severity="error", timeout=10)
-                        # Content could not be read, updated_text_content remains None
-            
-            # Update the text area with whatever content was successfully read (or None)
             self.call_from_thread(self._update_text_area_from_external, updated_text_content)
 
-        except FileNotFoundError: # For the 'tmux' command itself not being found
-            self.call_from_thread(self.notify, "Error: 'tmux' command not found. Is tmux installed and in your PATH?", title="TMUX Error", severity="error", timeout=10)
+        except FileNotFoundError: # For the initial 'tmux' command in display-message
+            self.call_from_thread(self.notify, "Error: 'tmux' command not found. Is tmux installed and in your PATH?", title="TMUX Error", severity="error")
             self.call_from_thread(self._update_text_area_from_external, None)
-        except Exception as e:
-            self.call_from_thread(self.notify, f"An unexpected error occurred with the external editor: {e}", title="Editor Error", severity="error", timeout=10)
+        except Exception as e: # Catch-all for other unexpected errors
+            self.call_from_thread(self.notify, f"An unexpected error occurred with the external editor: {e}", title="Editor Error", severity="error")
             self.call_from_thread(self._update_text_area_from_external, None)
-        finally:
-            # If the -W flag in tmux new-window works, the editor process will complete
-            # before this 'finally' block is reached. It's then safe to remove the temp file.
-            try:
-                if os.path.exists(temp_file_path): # Check if it exists before trying to remove
-                    os.remove(temp_file_path)
-            except OSError:
-                # Optionally notify if deletion fails, but often it's not critical if it's just a temp file.
-                # self.call_from_thread(self.notify, f"Warning: Could not delete temporary file: {temp_file_path}", severity="warning")
-                pass # Silently attempt removal
+        # finally:
+            # The temporary file is NO LONGER DELETED here.
+            # This is because the editor window is launched and the application does not wait.
+            # Deleting the file would likely happen before the editor can use it.
+            # CONSEQUENCE: Temporary files will accumulate in the system's temp directory.
 
     async def action_open_external_editor(self) -> None:
         """Handles Ctrl+E: Opens content in an external editor via tmux new-window."""
