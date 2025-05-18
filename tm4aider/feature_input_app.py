@@ -377,7 +377,7 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
 
             # The command for tmux new-window should be a single string for the shell command part
             # Ensure the temp_file_path is quoted to handle spaces or special characters.
-            quoted_temp_file_path = f"'{temp_file_path.replace(\"'\", \"'\\\\''\")}'" # Basic POSIX sh quoting
+            quoted_temp_file_path = f"'{temp_file_path.replace("'", "'\\''")}'" # Basic POSIX sh quoting
             full_editor_command_for_tmux = f"{editor_cmd} {quoted_temp_file_path}"
             
             tmux_cmd_list = ["tmux", "new-window", "-W", "-n", "TM4Aider-Edit", full_editor_command_for_tmux]
