@@ -37,7 +37,7 @@ class Sidebar(App):
     #reset_switch_container {
         height: auto; /* Wrap content */
         align: left middle; /* Align switch and label */
-        margin-bottom: 1; /* Space below the switch */
+        margin-bottom: 0; /* Space below the switch */
     }
     #reset_switch_container Switch {
         width: auto; /* Shrink to fit content */
