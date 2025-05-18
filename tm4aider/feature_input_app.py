@@ -380,6 +380,15 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
             # Ensure the temp_file_path is quoted to handle spaces or special characters.
             quoted_temp_file_path = f"'{temp_file_path.replace("'", "'\\''")}'" # Basic POSIX sh quoting
             full_editor_command_for_tmux = f"{editor_cmd} {quoted_temp_file_path}"
+
+            # For debugging, show the command that will be run
+            tmux_final_args_for_subprocess = ["tmux", "new-window", "-W", "-n", "TM4Aider-Edit", full_editor_command_for_tmux]
+            self.call_from_thread(
+                self.notify,
+                f"Tmux command to run:\n{tmux_final_args_for_subprocess}",
+                title="Debug: Editor Command",
+                timeout=15 # Longer timeout to allow copying
+            )
             
             # Use the utility function from tmux_utils
             # It's configured to not check=True by default, so we check returncode manually.
