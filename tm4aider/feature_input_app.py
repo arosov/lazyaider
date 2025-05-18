@@ -2,6 +2,9 @@ import functools
 import time # Add this import
 import re # Add this import
 import shutil # Add this import
+import tempfile
+import os
+import subprocess
 from textual.app import App, ComposeResult
 from textual.containers import Vertical, Horizontal
 from textual.widgets import Header, Footer, Button, Static, TextArea, LoadingIndicator, RadioSet, RadioButton # Add RadioSet, RadioButton
@@ -21,6 +24,7 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
 
     BINDINGS = [
         ("escape", "request_quit_or_reset", "Back/Cancel"),
+        ("ctrl+e", "open_external_editor", "External Edit"),
     ]
     CSS_PATH = "feature_input_app.tcss"
 
@@ -348,6 +352,104 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
                     self._set_ui_state(self.STATE_INPUT_FEATURE)
             else: # STATE_INPUT_FEATURE (in create_plan mode)
                 self.exit(None)
+
+    def _update_text_area_from_external(self, text_content: str | None) -> None:
+        """Called from worker thread to update TextArea and handle cleanup."""
+        text_area = self.query_one("#feature_description_input", TextArea)
+        if text_content is not None:
+            # Ensure the text area is editable before trying to load text
+            if not text_area.read_only:
+                text_area.load_text(text_content)
+                self.notify("Content updated from external editor.")
+            else:
+                self.notify("Text area is read-only. Cannot update from external editor.", severity="warning")
+        # If text_content is None, an error was already notified by the worker.
+        text_area.focus()
+
+    def _run_external_editor_sync(self, editor_cmd: str, current_text: str, temp_file_path: str) -> None:
+        """
+        Synchronous part: creates temp file, runs the editor, reads back the file, and cleans up.
+        This runs in a worker thread.
+        """
+        try:
+            with open(temp_file_path, "w", encoding="utf-8") as tmpfile_write:
+                tmpfile_write.write(current_text)
+
+            # The command for tmux new-window should be a single string for the shell command part
+            # Ensure the temp_file_path is quoted to handle spaces or special characters.
+            quoted_temp_file_path = f"'{temp_file_path.replace(\"'\", \"'\\\\''\")}'" # Basic POSIX sh quoting
+            full_editor_command_for_tmux = f"{editor_cmd} {quoted_temp_file_path}"
+            
+            tmux_cmd_list = ["tmux", "new-window", "-W", "-n", "TM4Aider-Edit", full_editor_command_for_tmux]
+
+            process = subprocess.run(tmux_cmd_list, capture_output=True, text=True, encoding="utf-8")
+
+            if process.returncode != 0:
+                error_message = f"External editor process error (code {process.returncode})."
+                if process.stderr:
+                    error_message += f"\nStderr: {process.stderr.strip()}"
+                if process.stdout:
+                    error_message += f"\nStdout: {process.stdout.strip()}" # Some editors output to stdout on error
+                self.call_from_thread(self.notify, error_message, title="Editor Error", severity="error", timeout=10)
+                self.call_from_thread(self._update_text_area_from_external, None) # Signal no update
+                return
+
+            with open(temp_file_path, "r", encoding="utf-8") as tmpfile_read:
+                updated_text = tmpfile_read.read()
+            self.call_from_thread(self._update_text_area_from_external, updated_text)
+
+        except FileNotFoundError: # For tmux command itself
+            self.call_from_thread(self.notify, "Error: 'tmux' command not found. Is tmux installed and in PATH?", title="TMUX Error", severity="error", timeout=10)
+            self.call_from_thread(self._update_text_area_from_external, None)
+        except Exception as e:
+            self.call_from_thread(self.notify, f"An unexpected error occurred with the external editor: {e}", title="Editor Error", severity="error", timeout=10)
+            self.call_from_thread(self._update_text_area_from_external, None)
+        finally:
+            try:
+                os.remove(temp_file_path)
+            except OSError:
+                # self.call_from_thread(self.notify, f"Warning: Could not delete temporary file: {temp_file_path}", severity="warning")
+                pass # Silently attempt removal
+
+    async def action_open_external_editor(self) -> None:
+        """Handles Ctrl+E: Opens content in an external editor via tmux new-window."""
+        editor_cmd_str = config.settings.get(config.KEY_TEXT_EDITOR)
+
+        if not editor_cmd_str:
+            self.notify(
+                "No external text editor is configured.\n"
+                "Set 'text_editor: your_editor_command' in '.tm4aider.conf.yml' (e.g., 'text_editor: nano').",
+                title="External Editor Not Configured",
+                severity="warning",
+                timeout=10
+            )
+            return
+
+        text_area = self.query_one("#feature_description_input", TextArea)
+        if text_area.read_only:
+            self.notify("Cannot edit read-only text area with external editor.", severity="warning")
+            return
+            
+        current_text = text_area.text
+
+        try:
+            # Create a temporary file that persists until manually deleted by _run_external_editor_sync.
+            # Suffix .md is important for editors that rely on extension for syntax highlighting.
+            fd, temp_file_path = tempfile.mkstemp(suffix=".md", text=True)
+            os.close(fd) # Close file descriptor, _run_external_editor_sync will open/write/read/delete.
+        except Exception as e:
+            self.notify(f"Failed to create temporary file: {e}", title="File Error", severity="error")
+            return
+
+        self.notify(f"Opening with '{editor_cmd_str}'. Close editor window/tab to return.", title="External Edit", timeout=5)
+        
+        # Pass current_text and temp_file_path to the worker.
+        # The worker will write current_text to temp_file_path before launching editor.
+        self.run_worker(
+            functools.partial(self._run_external_editor_sync, editor_cmd_str, current_text, temp_file_path),
+            thread=True,
+            exclusive=True # Ensure only one external editor instance at a time
+        )
 
 
 if __name__ == "__main__":
