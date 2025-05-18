@@ -1,5 +1,6 @@
 import subprocess # Still needed for CalledProcessError
 import re # For parsing markdown sections
+import shutil # For file copying
 from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, VerticalScroll, Vertical, Grid
@@ -622,22 +623,33 @@ class Sidebar(App):
                 plans_subdir_name = "plans"
                 plan_dir_path = Path(tm4aider_dir_name) / plans_subdir_name / self.current_selected_plan_name
 
-                # Construct the expected markdown file name based on the plan directory name
-                expected_markdown_filename = f"{self.current_selected_plan_name}.md"
-                markdown_file_path = plan_dir_path / expected_markdown_filename
+                original_markdown_filename = f"{self.current_selected_plan_name}.md"
+                original_markdown_file_path = plan_dir_path / original_markdown_filename
 
-                if not markdown_file_path.is_file():
-                    self.log.error(f"Markdown file not found: {markdown_file_path}")
-                    self.current_plan_markdown_content = None # Clear content if file not found
-                    self.current_selected_plan_name = None # Clear name
-                    # Mount a message indicating the specific file was not found
-                    await plan_sections_container.mount(Label(f"File '{expected_markdown_filename}' not found in '{self.current_selected_plan_name or 'selected plan'}'."))
+                active_markdown_filename = f"current-{self.current_selected_plan_name}.md"
+                active_markdown_file_path = plan_dir_path / active_markdown_filename
+
+                if not original_markdown_file_path.is_file():
+                    self.log.error(f"Original plan markdown file not found: {original_markdown_file_path}")
+                    self.current_plan_markdown_content = None
+                    self.current_selected_plan_name = None
+                    await plan_sections_container.mount(Label(f"Original plan file '{original_markdown_filename}' not found in '{plan_dir_path.name}'."))
                     return
 
-                self.log(f"Loading plan from: {markdown_file_path}")
+                try:
+                    shutil.copy2(original_markdown_file_path, active_markdown_file_path)
+                    self.log(f"Copied '{original_markdown_file_path}' to '{active_markdown_file_path}'.")
+                except (shutil.Error, IOError) as e:
+                    self.log.error(f"Error copying plan file from '{original_markdown_file_path}' to '{active_markdown_file_path}': {e}")
+                    self.current_plan_markdown_content = None
+                    self.current_selected_plan_name = None
+                    await plan_sections_container.mount(Label(f"Error creating working copy of plan: {e}"))
+                    return
+
+                self.log(f"Loading plan from working copy: {active_markdown_file_path}")
 
                 try:
-                    self.current_plan_markdown_content = markdown_file_path.read_text(encoding="utf-8") # Store content
+                    self.current_plan_markdown_content = active_markdown_file_path.read_text(encoding="utf-8") # Store content
                     section_titles = self._parse_markdown_sections(self.current_plan_markdown_content)
 
                     if not section_titles:
@@ -668,7 +680,7 @@ class Sidebar(App):
                     self.log(f"Displayed {len(section_titles)} sections for plan '{self.current_selected_plan_name}'.")
 
                 except Exception as e:
-                    self.log.error(f"Error loading or parsing plan file {markdown_file_path}: {e}")
+                    self.log.error(f"Error loading or parsing plan file {active_markdown_file_path}: {e}")
                     self.current_plan_markdown_content = None # Clear on error
                     self.current_selected_plan_name = None
                     await plan_sections_container.mount(Label(f"Error loading plan: {e}"))
