@@ -34,6 +34,18 @@ class Sidebar(App):
     #sel_load_plan {
         margin-right: 4;
     }
+    #reset_switch_container {
+        height: auto; /* Wrap content */
+        align: left middle; /* Align switch and label */
+        margin-bottom: 1; /* Space below the switch */
+    }
+    #reset_switch_container Switch {
+        width: auto; /* Shrink to fit content */
+    }
+    #reset_switch_container Label {
+        margin-left: 1; /* Space between switch and label */
+        width: auto; /* Shrink to fit content */
+    }
     #plan_sections_container {
         padding: 0 0; /* Add some padding around the sections */
         height: auto; /* Explicitly wrap content */
@@ -202,7 +214,9 @@ class Sidebar(App):
                     yield Button("Destroy Session", id="btn_quit_session", variant="error")
                 with Collapsible(title="Plan", collapsed=True, id="plan_collapsible"): # New section for Plan
                     yield Select([], id="sel_load_plan", prompt="Load plan...")
-                    yield Switch(name="Use /reset", id="sw_use_reset")
+                    with Horizontal(id="reset_switch_container"):
+                        yield Switch(value=True, id="sw_use_reset")
+                        yield Label("Use /reset")
                     yield Grid(id="plan_sections_container") # Container for dynamic plan sections
         yield Footer()
 
