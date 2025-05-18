@@ -432,6 +432,17 @@ class Sidebar(App):
                 except Exception as e:
                     self.log.error(f"Error saving debug chunk files: {e}")
 
+                # Check the "Use /reset" switch state
+                reset_switch = self.query_one("#sw_use_reset", Switch)
+                if reset_switch.value:
+                    try:
+                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "/reset")
+                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter")
+                        self.log("Sent to Aider: /reset")
+                    except Exception as e:
+                        self.log.error(f"Error sending /reset command to tmux: {e}")
+                        # Decide if we should return or continue. For now, let's continue.
+
                 # Extract file paths from the "files_md" chunk
                 potential_file_paths = self._extract_file_paths(files_md_chunk)
                 existing_files = []
