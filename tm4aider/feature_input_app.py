@@ -444,16 +444,16 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
         except Exception as e:
             self.call_from_thread(self.notify, f"An unexpected error occurred with the external editor: {e}", title="Editor Error", severity="error", timeout=10)
             self.call_from_thread(self._update_text_area_from_external, None)
-        # finally:
-            # Due to the inability to reliably wait for the editor to close with older tmux versions (no -W flag),
-            # we cannot safely delete the temporary file here. If deleted too early, the editor might fail
-            # to open it or lose data. These files will need to be manually cleaned from the system's
-            # temporary directory (e.g., /tmp).
-            # try:
-            #     os.remove(temp_file_path)
-            # except OSError:
-            #     # self.call_from_thread(self.notify, f"Warning: Could not delete temporary file: {temp_file_path}", severity="warning")
-            #     pass # Silently attempt removal
+        finally:
+            # If the -W flag in tmux new-window works, the editor process will complete
+            # before this 'finally' block is reached. It's then safe to remove the temp file.
+            try:
+                if os.path.exists(temp_file_path): # Check if it exists before trying to remove
+                    os.remove(temp_file_path)
+            except OSError:
+                # Optionally notify if deletion fails, but often it's not critical if it's just a temp file.
+                # self.call_from_thread(self.notify, f"Warning: Could not delete temporary file: {temp_file_path}", severity="warning")
+                pass # Silently attempt removal
 
     async def action_open_external_editor(self) -> None:
         """Handles Ctrl+E: Opens content in an external editor via tmux new-window."""
