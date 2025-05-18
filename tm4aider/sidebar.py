@@ -78,6 +78,9 @@ class Sidebar(App):
         min-width: 6; /* Removed as auto width is desired */
         padding: 0 0; /* Reduce inner padding: 0 for top/bottom, 1 for left/right */
     }
+    .edit_button_style {
+        margin-left: 1;
+    }
     #plan_collapsible {
         align: left top; /* Aligns the title and the content box to top-left */
         /* overflow_y: auto; /* Removed to let the parent VerticalScroll handle scrolling */
@@ -714,7 +717,7 @@ class Sidebar(App):
                         ask_button = Button("ask", id=f"plan_sec_{i}_ask", classes="plan_action_button")
                         code_button = Button("code", id=f"plan_sec_{i}_code", classes="plan_action_button")
                         arch_button = Button("arch", id=f"plan_sec_{i}_arch", classes="plan_action_button")
-                        edit_button = Button("Edit", id=f"plan_sec_{i}_edit", variant="default", classes="plan_action_button")
+                        edit_button = Button("Edit", id=f"plan_sec_{i}_edit", variant="default", classes="plan_action_button edit_button_style")
 
                         # Define children when creating the Horizontal container
                         buttons_container = Horizontal(ask_button, code_button, arch_button, edit_button)
