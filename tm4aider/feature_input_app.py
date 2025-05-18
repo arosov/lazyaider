@@ -153,16 +153,15 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
         cancel_button_widget = self.query_one("#cancel_initial_button", Button)
         feature_label_widget = self.query_one("#feature_label", Static)
         repomap_radioset_widget = self.query_one("#repomap_method_radioset", RadioSet)
-        # Get the parent of repomap_radioset_widget to hide it completely including its space
-        repomap_container = repomap_radioset_widget.parent
+        # The line "repomap_container = repomap_radioset_widget.parent" was removed.
+        # Hiding repomap_container (parent of RadioSet) was hiding the entire button row.
 
         if self.mode == "edit_section":
             feature_desc_input_widget.text = self.initial_text or ""
             generate_button_widget.label = "Save Changes"
             cancel_button_widget.label = "Discard & Exit" # Or "Cancel Edit" - "Discard & Exit" is consistent
             feature_label_widget.update("Edit Section Content:")
-            if repomap_container: # Hide the container of radio buttons
-                repomap_container.display = False
+            repomap_radioset_widget.display = False # Hide the RadioSet widget itself
             # Ensure loading and plan display areas are hidden from the start for edit_mode
             self.query_one("#loading_container").display = False
             self.query_one("#plan_display_container").display = False
