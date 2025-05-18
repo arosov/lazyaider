@@ -9,96 +9,124 @@ from textual.worker import Worker
 from textual.timer import Timer # Add this import
 
 # Import the LLM planner function and config
-from .llm_planner import generate_plan
+# generate_plan is only used in 'create_plan' mode
+# from .llm_planner import generate_plan
 from . import config # Import config to access settings like model name
 
-class FeatureInputApp(App[tuple[str, str] | None]):
-    """Enter feature description, generate a plan, and review it."""
+class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
+    """
+    App for feature description input and plan generation,
+    or for editing existing text content (e.g., a plan section).
+    """
 
     BINDINGS = [
         ("escape", "request_quit_or_reset", "Back/Cancel"),
     ]
     CSS_PATH = "feature_input_app.tcss"
 
-    TITLE = "TM4Aider - AI Powered Plan Generation"
+    # TITLE will be set in on_mount based on mode
 
-    # UI States
-    STATE_INPUT_FEATURE = "input_feature"
-    STATE_LOADING_PLAN = "loading_plan"
-    STATE_DISPLAY_PLAN = "display_plan"
+    # UI States (primarily for 'create_plan' mode)
+    STATE_INPUT_FEATURE = "input_feature"  # Also used by 'edit_section' for the main text area
+    STATE_LOADING_PLAN = "loading_plan"    # Only for 'create_plan'
+    STATE_DISPLAY_PLAN = "display_plan"    # Only for 'create_plan'
 
-    def __init__(self):
+    def __init__(self,
+                 mode: str = "create_plan", # "create_plan" or "edit_section"
+                 initial_text: str | None = None,
+                 window_title: str | None = None):
         super().__init__()
+        self.mode = mode
+        self.initial_text = initial_text
+        self.custom_window_title = window_title
+
         # Theme will be set in on_mount
         self.current_ui_state = self.STATE_INPUT_FEATURE
-        self.generated_plan_content: str | None = None
-        self.feature_description_content: str | None = None # To store the original feature description
+        self.generated_plan_content: str | None = None # For 'create_plan' mode
+        self.feature_description_content: str | None = None # For 'create_plan' mode (original feature desc)
+        
+        # LLM related attributes, only for 'create_plan' mode
         self._llm_worker: Worker | None = None
-        self._llm_call_start_time: float | None = None # Renamed to avoid conflict
+        self._llm_call_start_time: float | None = None
         self._loading_timer: Timer | None = None
-        self.repomix_available: bool = False # To track if repomix is available
+        self.repomix_available: bool = False # To track if repomix is available for 'create_plan'
 
 
     def compose(self) -> ComposeResult:
         yield Header()
         with Vertical(id="app-container"):
-            # Feature Input Area (State 1)
+            # Feature Input Area (State 1 / Edit Mode primary view)
             with Vertical(id="feature_input_container"):
-                yield Static("Describe the feature you want to implement:", classes="label", id="feature_label")
+                yield Static("Describe the feature you want to implement:", classes="label", id="feature_label") # Text updated in on_mount
                 yield TextArea(
-                    id="feature_description_input",
+                    id="feature_description_input", # Used for feature desc (create) or section content (edit)
                     language="markdown",
                     show_line_numbers=True,
                     soft_wrap=True,
                 )
                 with Horizontal(id="feature_buttons_container", classes="button-container"):
-                    with RadioSet(id="repomap_method_radioset"):
+                    # RadioSet for repomap method (only for 'create_plan' mode)
+                    with RadioSet(id="repomap_method_radioset"): # Visibility handled in on_mount
                         yield RadioButton("Aider's repomap", id="radio_aider_repomap", value="aider")
                         yield RadioButton("Repomix like a savage", id="radio_repomix", value="repomix")
-                    yield Button("Generate Plan", variant="primary", id="generate_plan_button")
-                    yield Button("Cancel", variant="error", id="cancel_initial_button")
+                    yield Button("Generate Plan", variant="primary", id="generate_plan_button") # Label updated in on_mount
+                    yield Button("Cancel", variant="error", id="cancel_initial_button") # Label updated in on_mount
 
-            # Loading Indicator Area (State 2)
-            with Vertical(id="loading_container", classes="hidden"):
-                yield LoadingIndicator(id="spinner") # Added ID for CSS targeting
+            # Loading Indicator Area (State 2 - only for 'create_plan' mode)
+            with Vertical(id="loading_container", classes="hidden"): # Visibility handled in _set_ui_state
+                yield LoadingIndicator(id="spinner")
                 yield Static(
                     "This may take a moment. Press Esc to try and cancel.",
                     id="loading_subtext"
-                    # The 'styles' argument was removed from here.
-                    # Styling is handled by tm4aider/feature_input_app.tcss
                 )
 
-            # Plan Display Area (State 3)
-            with Vertical(id="plan_display_container", classes="hidden"):
-                yield Static("Generated Plan:", classes="label", id="plan_label")
+            # Plan Display Area (State 3 - only for 'create_plan' mode)
+            with Vertical(id="plan_display_container", classes="hidden"): # Visibility handled in _set_ui_state
+                yield Static("Generated Plan:", classes="label", id="plan_label") # Text updated in on_mount
                 yield TextArea(
-                    id="plan_display_area",
+                    id="plan_display_area", # Used for LLM output in 'create_plan'
                     language="markdown",
                     show_line_numbers=True,
                     soft_wrap=True,
-                    read_only=True, # Plan is for display
+                    read_only=True,
                 )
-                with Horizontal(id="plan_buttons_container", classes="button-container"):
+                with Horizontal(id="plan_buttons_container", classes="button-container"): # Visibility handled in _set_ui_state
                     yield Button("Save Plan & Exit", variant="success", id="save_plan_button")
                     yield Button("Discard & Exit", variant="error", id="discard_plan_button")
-                    # yield Button("Edit Feature", variant="default", id="edit_feature_button") # Future enhancement
         yield Footer()
 
     def _set_ui_state(self, new_state: str) -> None:
         self.current_ui_state = new_state
-        self.query_one("#feature_input_container").set_class(new_state != self.STATE_INPUT_FEATURE, "hidden")
-        self.query_one("#loading_container").set_class(new_state != self.STATE_LOADING_PLAN, "hidden")
-        self.query_one("#plan_display_container").set_class(new_state != self.STATE_DISPLAY_PLAN, "hidden")
 
-        if new_state == self.STATE_INPUT_FEATURE:
+        is_edit_mode = self.mode == "edit_section"
+
+        # Main input container is always visible in 'input_feature' state for both modes
+        self.query_one("#feature_input_container").set_class(new_state != self.STATE_INPUT_FEATURE, "hidden")
+        
+        # Loading and plan display containers are only for 'create_plan' mode
+        self.query_one("#loading_container").set_class(is_edit_mode or new_state != self.STATE_LOADING_PLAN, "hidden")
+        self.query_one("#plan_display_container").set_class(is_edit_mode or new_state != self.STATE_DISPLAY_PLAN, "hidden")
+        
+        # Plan buttons container (Save/Discard for generated plan) is part of plan_display_container, so implicitly handled.
+
+        if new_state == self.STATE_INPUT_FEATURE: # Focus main text area
             self.query_one("#feature_description_input", TextArea).focus()
-        elif new_state == self.STATE_DISPLAY_PLAN:
+        elif not is_edit_mode and new_state == self.STATE_DISPLAY_PLAN: # Focus plan display (only create_plan)
             self.query_one("#plan_display_area", TextArea).focus()
 
 
     async def on_mount(self) -> None:
-        """Apply theme and focus the input widget on mount."""
-        # Apply theme from config when app is mounted
+        """Apply theme, configure UI based on mode, and focus the input widget."""
+        # Set Title
+        if self.custom_window_title:
+            self.TITLE = self.custom_window_title
+        elif self.mode == "edit_section":
+            self.TITLE = "TM4Aider - Edit Section"
+        else: # create_plan
+            self.TITLE = "TM4Aider - AI Powered Plan Generation"
+
+
+        # Apply theme from config
         theme_name_from_config = config.settings.get(config.KEY_THEME_NAME, config.DEFAULT_THEME_NAME)
         if theme_name_from_config == "dark":
             self.dark = True
@@ -119,18 +147,36 @@ class FeatureInputApp(App[tuple[str, str] | None]):
                 print(f"Warning: Failed to set theme '{theme_name_from_config}': {e}. Falling back to default.", file=sys.stderr)
                 self.dark = config.DEFAULT_THEME_NAME == "dark"
 
-        # Check for repomix availability and configure RadioButton
-        repomix_path = shutil.which("repomix")
-        self.repomix_available = repomix_path is not None
-        radio_repomix_button = self.query_one("#radio_repomix", RadioButton)
-        if not self.repomix_available:
-            radio_repomix_button.disabled = True
-            radio_repomix_button.label = "Repomix (not found)" # Update label
-        
-        # Set default selection for RadioSet
-        self.query_one("#repomap_method_radioset", RadioSet).value = "aider"
+        # Mode-specific UI setup
+        feature_desc_input_widget = self.query_one("#feature_description_input", TextArea)
+        generate_button_widget = self.query_one("#generate_plan_button", Button)
+        cancel_button_widget = self.query_one("#cancel_initial_button", Button)
+        feature_label_widget = self.query_one("#feature_label", Static)
+        repomap_radioset_widget = self.query_one("#repomap_method_radioset", RadioSet)
+        # Get the parent of repomap_radioset_widget to hide it completely including its space
+        repomap_container = repomap_radioset_widget.parent
 
-        self._set_ui_state(self.STATE_INPUT_FEATURE)
+        if self.mode == "edit_section":
+            feature_desc_input_widget.text = self.initial_text or ""
+            generate_button_widget.label = "Save Changes"
+            cancel_button_widget.label = "Discard & Exit" # Or "Cancel Edit" - "Discard & Exit" is consistent
+            feature_label_widget.update("Edit Section Content:")
+            if repomap_container: # Hide the container of radio buttons
+                repomap_container.display = False
+            # Ensure loading and plan display areas are hidden from the start for edit_mode
+            self.query_one("#loading_container").display = False
+            self.query_one("#plan_display_container").display = False
+        else: # create_plan mode
+            # Check for repomix availability and configure RadioButton
+            repomix_path = shutil.which("repomix")
+            self.repomix_available = repomix_path is not None
+            radio_repomix_button = self.query_one("#radio_repomix", RadioButton)
+            if not self.repomix_available:
+                radio_repomix_button.disabled = True
+                radio_repomix_button.label = "Repomix (not found)"
+            repomap_radioset_widget.value = "aider" # Default for create_plan
+
+        self._set_ui_state(self.STATE_INPUT_FEATURE) # Initial state for both modes
 
     def watch_theme(self, old_theme: str | None, new_theme: str | None) -> None:
         """Saves the theme when it changes."""
@@ -146,93 +192,84 @@ class FeatureInputApp(App[tuple[str, str] | None]):
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         button_id = event.button.id
+        description_area = self.query_one("#feature_description_input", TextArea)
 
-        if button_id == "generate_plan_button":
-            description_area = self.query_one("#feature_description_input", TextArea)
-            description = description_area.text.strip()
-            if not description:
-                description_area.border_title = "Description cannot be empty!"
-                description_area.styles.border_type = "heavy" # Make it more visible
-                description_area.styles.border_title_color = "red"
-                description_area.styles.border = ("heavy", "red")
-                return
-            
-            self.feature_description_content = description # Store the feature description
+        if button_id == "generate_plan_button": # "Generate Plan" or "Save Changes"
+            if self.mode == "edit_section":
+                edited_text = description_area.text
+                self.exit(edited_text) # Return the edited text
+            else: # create_plan mode
+                description = description_area.text.strip()
+                if not description:
+                    description_area.border_title = "Description cannot be empty!"
+                    description_area.styles.border_type = "heavy"
+                    description_area.styles.border_title_color = "red"
+                    description_area.styles.border = ("heavy", "red")
+                    return
+                
+                self.feature_description_content = description # Store original feature description
 
-            description_area.border_title = None # Reset border title
-            # Reset border styles by removing the ones applied for the error state.
-            # This allows the default CSS to take over again.
-            description_area.styles.border_type = None
-            description_area.styles.border_title_color = None
-            # If you want to be absolutely sure it reverts to the CSS,
-            # you might need to re-apply the original CSS border if it was more complex
-            # than just "round $primary". For now, clearing specific overrides is often enough.
-            # Or, if the default border is simple, like "round $primary",
-            # and you know the resolved color of $primary, you could use that.
-            # For now, let's try removing the overrides.
-            # If the CSS for TextArea defines a border, it should reappear.
-            # If not, we might need to explicitly set it to a known default.
-            # A common default might be:
-            # description_area.styles.border = ("round", "blue") # or some other known color
-            # For now, let's rely on CSS to re-apply.
-            # If the CSS for TextArea is `border: round $primary;`, this should work.
-            # We can also explicitly remove the 'heavy' and 'red' border if that was the only change.
-            # To reset to the CSS-defined style, we clear the inline overrides.
-            # Textual will then fall back to the styles defined in feature_input_app.tcss for TextArea.
-            description_area.styles.border_type = None
-            description_area.styles.border_title_color = None
-            description_area.styles.border = None # This should make it revert to the CSS `border: round $primary;`
+                # Reset border styles
+                description_area.border_title = None
+                description_area.styles.border_type = None
+                description_area.styles.border_title_color = None
+                description_area.styles.border = None
 
-            # Get model name for display
-            current_model_name = config.settings.get(config.KEY_LLM_MODEL, "Unknown Model")
-            loading_text_widget = self.query_one("#loading_subtext", Static)
-            # Initial message, timer will update it with elapsed time
-            loading_text_widget.update(f"Generating plan with {current_model_name}, please wait...")
+                # --- Start LLM plan generation (only for create_plan mode) ---
+                # Import generate_plan here to avoid import if not used
+                from .llm_planner import generate_plan
 
-            self._llm_call_start_time = time.monotonic() # Use renamed variable
-            if self._loading_timer is not None:
-                self._loading_timer.stop() # Should not be running, but good practice
-            self._loading_timer = self.set_interval(0.1, self._update_loading_time) # Update frequently for smoothness
+                current_model_name = config.settings.get(config.KEY_LLM_MODEL, "Unknown Model")
+                loading_text_widget = self.query_one("#loading_subtext", Static)
+                loading_text_widget.update(f"Generating plan with {current_model_name}, please wait...")
 
-            self._set_ui_state(self.STATE_LOADING_PLAN)
+                self._llm_call_start_time = time.monotonic()
+                if self._loading_timer is not None:
+                    self._loading_timer.stop()
+                self._loading_timer = self.set_interval(0.1, self._update_loading_time)
 
-            if self._llm_worker is not None: # Should not happen, but good practice
-                await self._llm_worker.cancel()
+                self._set_ui_state(self.STATE_LOADING_PLAN)
 
-            selected_repomap_method = self.query_one("#repomap_method_radioset", RadioSet).value
-            bound_call_generate_plan = functools.partial(self._call_generate_plan, description, selected_repomap_method)
-            self._llm_worker = self.run_worker(bound_call_generate_plan, thread=True)
+                if self._llm_worker is not None:
+                    await self._llm_worker.cancel()
 
-        elif button_id == "cancel_initial_button":
-            self.exit(None) # Exit without a plan
+                selected_repomap_method = self.query_one("#repomap_method_radioset", RadioSet).value
+                bound_call_generate_plan = functools.partial(self._call_generate_plan, description, selected_repomap_method, generate_plan)
+                self._llm_worker = self.run_worker(bound_call_generate_plan, thread=True)
+                # --- End LLM plan generation ---
 
-        elif button_id == "save_plan_button":
+        elif button_id == "cancel_initial_button": # "Cancel" or "Discard & Exit"
+            self.exit(None) # Exit without returning data
+
+        elif button_id == "save_plan_button": # Only for 'create_plan' mode (saves LLM generated plan)
             if self.generated_plan_content is not None and self.feature_description_content is not None:
+                # Return tuple for 'create_plan' mode
                 self.exit((self.generated_plan_content, self.feature_description_content))
             else:
-                # Fallback: should not happen if UI logic is correct, but as a safety measure.
                 self.exit(None)
 
-        elif button_id == "discard_plan_button":
-            self.exit(None) # Exit without a plan
+        elif button_id == "discard_plan_button": # Only for 'create_plan' mode (discards LLM generated plan)
+            self.exit(None)
 
-    def _call_generate_plan(self, description: str, repomap_method: str) -> None:
-        """Synchronous wrapper to call generate_plan and then update UI from thread."""
+    def _call_generate_plan(self, description: str, repomap_method: str, generate_plan_func) -> None:
+        """
+        Synchronous wrapper to call generate_plan_func (passed as arg)
+        and then update UI from thread. Only for 'create_plan' mode.
+        """
         try:
-            # generate_plan now returns a tuple (plan_content, model_name, token_count) or an error string
-            # Since FeatureInputApp runs before session selection, session_name is None.
-            plan_data = generate_plan(description, session_name=None, repomap_method=repomap_method)
+            plan_data = generate_plan_func(description, session_name=None, repomap_method=repomap_method)
             self.call_from_thread(self._handle_plan_generation_result, plan_data)
         except Exception as e:
-            # This catch is for unexpected errors in the _call_generate_plan itself,
-            # not for errors returned by generate_plan (which are handled as strings).
             error_message = f"# Error During Plan Generation Call\n\nAn unexpected error occurred: {type(e).__name__} - {e}"
             self.call_from_thread(self._handle_plan_generation_result, error_message)
 
 
     def _handle_plan_generation_result(self, plan_data: tuple[str, str, int | None] | str) -> None:
-        """Called from worker thread with the result of plan generation."""
-        self._llm_worker = None # Clear worker reference
+        """
+        Called from worker thread with the result of plan generation.
+        Only for 'create_plan' mode.
+        """
+        self._llm_worker = None
         plan_display_widget = self.query_one("#plan_display_area", TextArea)
         plan_display_widget.clear()
 
@@ -287,30 +324,38 @@ class FeatureInputApp(App[tuple[str, str] | None]):
 
 
     async def action_request_quit_or_reset(self) -> None:
-        """Handles Escape key."""
-        if self.current_ui_state == self.STATE_DISPLAY_PLAN:
-            # On plan display, Esc discards and exits (same as "Discard & Exit" button)
+        """Handles Escape key. Behavior depends on mode and current UI state."""
+        if self.mode == "edit_section":
+            # In edit mode, Esc always means cancel/discard changes
             self.exit(None)
-        elif self.current_ui_state == self.STATE_LOADING_PLAN:
-            if self._loading_timer is not None:
-                self._loading_timer.stop()
-                self._loading_timer = None
-            self._llm_call_start_time = None # Use renamed variable
+        else: # create_plan mode
+            if self.current_ui_state == self.STATE_DISPLAY_PLAN:
+                # On plan display (after LLM), Esc discards and exits
+                self.exit(None)
+            elif self.current_ui_state == self.STATE_LOADING_PLAN:
+                # While LLM is loading, Esc attempts to cancel
+                if self._loading_timer is not None:
+                    self._loading_timer.stop()
+                    self._loading_timer = None
+                self._llm_call_start_time = None
 
-            if self._llm_worker is not None:
-                await self._llm_worker.cancel() # Attempt to cancel the worker
-                self._llm_worker = None
-                self.query_one("#loading_subtext", Static).update("Cancellation requested... returning to input.")
-                self.set_timer(0.5, lambda: self._set_ui_state(self.STATE_INPUT_FEATURE)) # Give time for UI update
-            else:
-                self._set_ui_state(self.STATE_INPUT_FEATURE)
-        else: # STATE_INPUT_FEATURE
-            self.exit(None)
+                if self._llm_worker is not None:
+                    await self._llm_worker.cancel()
+                    self._llm_worker = None
+                    self.query_one("#loading_subtext", Static).update("Cancellation requested... returning to input.")
+                    # Use a short delay before resetting UI state to allow message to be seen
+                    self.set_timer(0.5, lambda: self._set_ui_state(self.STATE_INPUT_FEATURE))
+                else: # Should not happen if worker was supposed to be running
+                    self._set_ui_state(self.STATE_INPUT_FEATURE)
+            else: # STATE_INPUT_FEATURE (in create_plan mode)
+                self.exit(None)
 
 
 if __name__ == "__main__":
     # This __main__ block is for direct testing of the FeatureInputApp.
-    # It will create/update a CSS file in the expected location relative to this script.
+    # It primarily tests the "create_plan" mode.
+    # To test "edit_section" mode, you might run section_editor.py directly,
+    # or add CLI arguments here to switch modes for testing.
     import os
 
     # Define constants for directory names for testing purposes
@@ -380,54 +425,53 @@ if __name__ == "__main__":
     except IOError as e:
         print(f"Could not write CSS to {css_file_path}: {e}")
 
-    print("Testing FeatureInputApp. Ensure LLM API keys and dependencies are configured.")
-    app = FeatureInputApp()
-    app_result = app.run() # App now returns a tuple or None
-    if app_result:
-        plan_content, feature_description = app_result # Unpack the tuple
+    print("Testing FeatureInputApp in 'create_plan' mode. Ensure LLM API keys and dependencies are configured.")
+    # Default test is for "create_plan" mode
+    app_create = FeatureInputApp(mode="create_plan")
+    app_result_create = app_create.run()
 
-        print("\n--- Generated Plan (from app exit) ---")
-        print(plan_content)
+    if app_result_create:
+        # In 'create_plan' mode, result is a tuple (plan_content, feature_description)
+        if isinstance(app_result_create, tuple) and len(app_result_create) == 2:
+            plan_content, feature_description = app_result_create
 
-        plan_title = _extract_plan_title_for_test(plan_content) # Use plan_content for title
-        sanitized_title = _sanitize_for_path_for_test(plan_title)
-        
-        # Note: This test save path is relative to CWD when running this script directly.
-        # If running from project root, it will be .tm4aider/plans/...
-        # If running from tm4aider/ it will be ../.tm4aider/plans/...
-        # For consistency with plan_generator.py, we assume CWD is project root.
-        # If this script is run from tm4aider/, .tm4aider/ will be created inside tm4aider/
-        # A more robust approach for tests might use tempfile or ensure paths are absolute.
-        # For now, using relative path as per original structure.
-        plan_dir_name = TM4AIDER_DIR_NAME_TEST # Base directory for all tm4aider specific files
-        plans_subdir = PLANS_SUBDIR_NAME_TEST      # Subdirectory for plans
-        
-        # Construct path relative to where the script is run.
-        # If script is run from project root, this will create .tm4aider/plans/etc.
-        # If script is run from tm4aider/ directory, it will create tm4aider/.tm4aider/plans/etc.
-        # To ensure it's always at project root level, one might use `os.path.join(script_dir, "..", plan_dir_name, ...)`
-        # but that assumes a fixed depth. For now, let's keep it simple and relative to CWD.
-        # The user's request implies .tm4aider is at the root.
-        
-        save_dir_path = os.path.join(plan_dir_name, plans_subdir, sanitized_title)
-        save_file_path = os.path.join(save_dir_path, f"{sanitized_title}.md")
+            print("\n--- Generated Plan (from app exit - create_plan mode) ---")
+            print(plan_content)
 
-        try:
-            os.makedirs(save_dir_path, exist_ok=True)
+            plan_title = _extract_plan_title_for_test(plan_content)
+            sanitized_title = _sanitize_for_path_for_test(plan_title)
             
-            # Save the generated plan
-            plan_file_path = os.path.join(save_dir_path, f"{sanitized_title}.md")
-            with open(plan_file_path, "w", encoding="utf-8") as f_out_plan:
-                f_out_plan.write(plan_content)
-            print(f"\nPlan saved to {plan_file_path} (relative to CWD)")
+            plan_dir_name = TM4AIDER_DIR_NAME_TEST
+            plans_subdir = PLANS_SUBDIR_NAME_TEST
+            save_dir_path = os.path.join(plan_dir_name, plans_subdir, sanitized_title)
+            
+            try:
+                os.makedirs(save_dir_path, exist_ok=True)
+                plan_file_path = os.path.join(save_dir_path, f"{sanitized_title}.md")
+                with open(plan_file_path, "w", encoding="utf-8") as f_out_plan:
+                    f_out_plan.write(plan_content)
+                print(f"\nPlan saved to {plan_file_path} (relative to CWD)")
 
-            # Save the feature description
-            feature_desc_file_path = os.path.join(save_dir_path, "feature_description.md")
-            with open(feature_desc_file_path, "w", encoding="utf-8") as f_out_desc:
-                f_out_desc.write(feature_description)
-            print(f"Feature description saved to {feature_desc_file_path} (relative to CWD)")
+                feature_desc_file_path = os.path.join(save_dir_path, "feature_description.md")
+                with open(feature_desc_file_path, "w", encoding="utf-8") as f_out_desc:
+                    f_out_desc.write(feature_description)
+                print(f"Feature description saved to {feature_desc_file_path} (relative to CWD)")
 
-        except IOError as e_save:
-            print(f"\nError saving files to {save_dir_path}: {e_save}")
+            except IOError as e_save:
+                print(f"\nError saving files for 'create_plan' test: {e_save}")
+        else:
+            print(f"\nUnexpected result type from 'create_plan' mode: {app_result_create}")
     else:
-        print("\nInput/Plan generation cancelled or discarded.")
+        print("\n'create_plan' mode: Input/Plan generation cancelled or discarded.")
+
+    # Example of how to test "edit_section" mode (can be run separately or conditionally)
+    # print("\nTesting FeatureInputApp in 'edit_section' mode (dummy test)...")
+    # dummy_initial_text = "## Section to Edit\n\nThis is some initial content."
+    # app_edit = FeatureInputApp(mode="edit_section", initial_text=dummy_initial_text, window_title="Test Edit Mode")
+    # app_result_edit = app_edit.run()
+    # if app_result_edit is not None:
+    #     # In 'edit_section' mode, result is a string (edited_text)
+    #     print("\n--- Edited Text (from app exit - edit_section mode) ---")
+    #     print(app_result_edit)
+    # else:
+    #     print("\n'edit_section' mode: Edit cancelled or discarded.")

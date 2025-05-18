@@ -388,12 +388,18 @@ class Sidebar(App):
                 self.log.error(f"An unexpected error occurred while managing plan generator window: {e}")
 
         elif button_id and button_id.startswith("plan_sec_"):
-            # Example ID: "plan_sec_0_ask"
             parts = button_id.split("_")
+            section_index = -1  # Ensure section_index is defined for the finally-like color update
+            action_type = ""
             try:
                 section_index = int(parts[2])
-                action_type = parts[3] # "ask", "code", or "arch"
-                self.log(f"Plan section button: Index {section_index}, Action: {action_type}")
+                action_type = parts[3]  # "ask", "code", "arch", or "edit"
+            except (IndexError, ValueError) as e:
+                self.log.error(f"Error parsing plan section button ID '{button_id}': {e}")
+                return # Exit if parsing fails
+
+            if action_type in ("ask", "code", "arch"):
+                self.log(f"Plan section Aider command: Index {section_index}, Action: {action_type}")
 
                 if not self.TMUX_TARGET_PANE:
                     self.log.warning("TMUX_TARGET_PANE not set. Cannot send section to Aider.")
@@ -552,33 +558,78 @@ class Sidebar(App):
 
                 except Exception as e:
                     self.log.error(f"Error sending multi-line prompt (goals/instructions) to tmux: {e}")
-
-            except (IndexError, ValueError) as e:
-                self.log.error(f"Error parsing plan section button ID '{button_id}': {e}")
             
-            # After processing the button action, update label colors
-            if button_id and button_id.startswith("plan_sec_"):
+            elif action_type == "edit":
+                self.log(f"Plan section Edit button: Index {section_index}")
                 try:
-                    # Re-parse section_index, or better, use the one from above if it's in scope
-                    # Assuming section_index is correctly defined from the button press logic
-                    # num_sections = len(self.query("#plan_sections_container > Vertical.plan_section_item_container"))
-                    # A more robust way to get num_sections is if section_titles was stored or its length.
-                    # For now, let's assume we can query all labels up to a reasonable max or count them.
-                    # The number of sections is dynamic, based on the loaded plan.
-                    # We can iterate through existing labels by trying to query them.
+                    if not self.TMUX_SESSION_NAME:
+                        self.log.warning("TMUX_SESSION_NAME not set. Cannot open editor window.")
+                        return
+                    if not self.current_selected_plan_name:
+                        self.log.warning("No plan selected. Cannot determine file to edit.")
+                        return
 
-                    # Get the number of sections by counting the Vertical containers in plan_sections_container
+                    tm4aider_dir_name = ".tm4aider" 
+                    plans_subdir_name = "plans"
+                    plan_dir_path = Path(tm4aider_dir_name) / plans_subdir_name / self.current_selected_plan_name
+                    active_markdown_filename = f"current-{self.current_selected_plan_name}.md"
+                    active_markdown_file_path = plan_dir_path / active_markdown_filename
+
+                    if not active_markdown_file_path.is_file():
+                        self.log.error(f"Working plan file not found: {active_markdown_file_path}. Cannot edit.")
+                        return
+
+                    editor_window_name = f"tm4aider-edit-s{section_index}-{self.current_selected_plan_name[:10]}"
+                    
+                    # Use sys.executable for robustness, and -m to run module if section_editor is part of package
+                    # Assuming tm4aider.section_editor can be run as a module.
+                    # If section_editor.py is just a script, use "python tm4aider/section_editor.py"
+                    # For now, stick to the pattern used for plan_generator.py
+                    command_to_run = f"python tm4aider/section_editor.py --file-path \"{active_markdown_file_path.resolve()}\" --section-index {section_index}"
+                    
+                    target_window_specifier = f"{self.TMUX_SESSION_NAME}:{editor_window_name}"
+                    target_pane_for_keys = f"{target_window_specifier}.0"
+
+                    if tmux_utils.select_window(target_window_specifier):
+                        self.log.info(f"Editor window '{editor_window_name}' exists. Selecting and re-running command.")
+                        tmux_utils.send_keys_to_pane(target_pane_for_keys, command_to_run)
+                        tmux_utils.send_keys_to_pane(target_pane_for_keys, "Enter")
+                    else:
+                        self.log.info(f"Editor window '{editor_window_name}' does not exist. Creating.")
+                        tmux_utils.create_window(self.TMUX_SESSION_NAME, editor_window_name, command_to_run, select=True)
+
+                    self.log.info(f"Launched section editor for section {section_index} in window '{editor_window_name}'.")
+                    self.log.info("IMPORTANT: After editing, re-select the plan from the dropdown to see changes in the sidebar.")
+
+                except FileNotFoundError: 
+                    self.log.error("Error: tmux command not found. Is tmux installed and in PATH?")
+                except subprocess.CalledProcessError as e:
+                    self.log.error(f"Error managing tmux window for section editor: {e.stderr.decode() if e.stderr else e}")
+                except Exception as e: # Catch any other unexpected error during edit launch
+                    self.log.error(f"An unexpected error occurred while launching section editor: {e}")
+            else:
+                self.log.warning(f"Unknown action type '{action_type}' for button ID '{button_id}'")
+                return # Do not proceed to color update if action is unknown
+
+            # After processing any valid plan_sec_ button action, update label colors
+            # This block is now correctly placed after the if/elif chain for action_type
+            if section_index != -1: # Check if section_index was successfully parsed
+                try:
                     plan_sections_container_widget = self.query_one("#plan_sections_container", Grid)
                     num_sections = len(plan_sections_container_widget.children)
 
                     for i in range(num_sections):
-                        label_to_style = self.query_one(f"#section_label_{i}", Label)
-                        if i < section_index: # section_index is from the button press logic
-                            label_to_style.styles.color = "green"
-                        elif i == section_index:
-                            label_to_style.styles.color = "blue"
-                        else:
-                            label_to_style.styles.color = None # Reset to default/CSS
+                        # Ensure the query for label is safe, e.g., if a section was deleted and UI not fully refreshed
+                        try:
+                            label_to_style = self.query_one(f"#section_label_{i}", Label)
+                            if i < section_index:
+                                label_to_style.styles.color = "green"
+                            elif i == section_index: # The currently interacted-with section
+                                label_to_style.styles.color = "blue"
+                            else:
+                                label_to_style.styles.color = None # Reset to default/CSS
+                        except Exception: # Catch error if a specific label_to_style is not found
+                            self.log.warning(f"Could not find label #section_label_{i} for styling.")
                     self.log(f"Updated colors for section labels based on active section {section_index}.")
                 except Exception as e:
                     self.log.error(f"Error updating section label colors: {e}")
@@ -663,9 +714,10 @@ class Sidebar(App):
                         ask_button = Button("ask", id=f"plan_sec_{i}_ask", classes="plan_action_button")
                         code_button = Button("code", id=f"plan_sec_{i}_code", classes="plan_action_button")
                         arch_button = Button("arch", id=f"plan_sec_{i}_arch", classes="plan_action_button")
+                        edit_button = Button("Edit", id=f"plan_sec_{i}_edit", variant="default", classes="plan_action_button")
 
                         # Define children when creating the Horizontal container
-                        buttons_container = Horizontal(ask_button, code_button, arch_button)
+                        buttons_container = Horizontal(ask_button, code_button, arch_button, edit_button)
 
                         # Define children when creating the Vertical container for the section item
                         section_item_container = Vertical(
