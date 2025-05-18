@@ -71,12 +71,36 @@ def run_command_in_new_window_and_wait(
 ) -> subprocess.CompletedProcess:
     """
     Creates a new tmux window, runs a command in it, and waits for the command to complete.
-    The tmux `new-window -W` command itself waits for the command run inside the new window.
+    The tmux `wait-for` command is used to make this function wait.
     """
-    # command_to_run is a single string argument for tmux new-window.
-    # The -W flag makes the command wait for the program in the new window to exit.
-    cmd_args = ["new-window", "-W", "-n", window_name, command_to_run]
-    return _run_tmux_command(cmd_args, check=check, capture_output=capture_output, text=text)
+    import uuid
+    # Generate a unique channel name for this wait operation
+    channel_name = f"tm4aider-wait-{uuid.uuid4().hex}"
+
+    # The command to run in the new window needs to be wrapped to signal the channel when it's done.
+    # sh -c 'your_command_here; tmux wait-for -S our_channel_name'
+    # Ensure single quotes in command_to_run are handled if it contains them.
+    # A simple way is to ensure command_to_run itself doesn't have unescaped single quotes
+    # or to use more complex shell quoting. Assuming command_to_run is "editor '/path/to/file'".
+    # If command_to_run can have single quotes:
+    #   escaped_command = command_to_run.replace("'", "'\\''")
+    #   augmented_command = f"sh -c '{escaped_command}; tmux wait-for -S {channel_name}'"
+    # For simplicity, assuming command_to_run is constructed safely by the caller (as it is).
+    augmented_command = f"{command_to_run}; tmux wait-for -S {channel_name}"
+
+    # Step 1: Create the new window and run the augmented command.
+    # This command itself is non-blocking. We use check=True to raise an error if new-window fails.
+    new_window_cmd_args = ["new-window", "-n", window_name, augmented_command]
+    try:
+        _run_tmux_command(new_window_cmd_args, check=True, capture_output=capture_output, text=text) # text=text for augmented_command
+    except subprocess.CalledProcessError as e:
+        # If new-window fails, re-raise to indicate the problem.
+        raise RuntimeError(f"Failed to create tmux new window '{window_name}': {e}") from e
+
+    # Step 2: Wait for the signal on the channel.
+    # The `check` parameter for this call is passed from the function's arguments.
+    wait_cmd_args = ["wait-for", channel_name]
+    return _run_tmux_command(wait_cmd_args, check=check, capture_output=False, text=False) # Output/text not usually needed for wait-for
 
 def select_window(target_specifier: str) -> bool:
     """
