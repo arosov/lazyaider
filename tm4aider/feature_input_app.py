@@ -15,6 +15,7 @@ from textual.timer import Timer # Add this import
 # generate_plan is only used in 'create_plan' mode
 # from .llm_planner import generate_plan
 from . import config # Import config to access settings like model name
+from .tmux_utils import run_command_in_new_window_and_wait
 
 class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
     """
@@ -380,9 +381,16 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
             quoted_temp_file_path = f"'{temp_file_path.replace("'", "'\\''")}'" # Basic POSIX sh quoting
             full_editor_command_for_tmux = f"{editor_cmd} {quoted_temp_file_path}"
             
-            tmux_cmd_list = ["tmux", "new-window", "-W", "-n", "TM4Aider-Edit", full_editor_command_for_tmux]
-
-            process = subprocess.run(tmux_cmd_list, capture_output=True, text=True, encoding="utf-8")
+            # Use the utility function from tmux_utils
+            # It's configured to not check=True by default, so we check returncode manually.
+            # text=True implies utf-8 for capture_output.
+            process = run_command_in_new_window_and_wait(
+                window_name="TM4Aider-Edit",
+                command_to_run=full_editor_command_for_tmux,
+                capture_output=True,
+                text=True,
+                check=False # Explicitly False to match original logic of checking returncode
+            )
 
             if process.returncode != 0:
                 error_message = f"External editor process error (code {process.returncode})."

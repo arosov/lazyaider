@@ -62,6 +62,21 @@ def attach_session(session_name: str):
     # FileNotFoundError will propagate from os.execvp if tmux is not found.
     os.execvp("tmux", ["tmux", "attach-session", "-t", session_name])
 
+def run_command_in_new_window_and_wait(
+    window_name: str,
+    command_to_run: str,
+    capture_output: bool = False,
+    text: bool = False,
+    check: bool = False  # Default to False to allow manual error checking by caller
+) -> subprocess.CompletedProcess:
+    """
+    Creates a new tmux window, runs a command in it, and waits for the command to complete.
+    The tmux `new-window -W` command itself waits for the command run inside the new window.
+    """
+    # command_to_run is a single string argument for tmux new-window
+    cmd_args = ["new-window", "-W", "-n", window_name, command_to_run]
+    return _run_tmux_command(cmd_args, check=check, capture_output=capture_output, text=text)
+
 def select_window(target_specifier: str) -> bool:
     """
     Selects the specified tmux window (e.g., "session_name:window_name" or "session_name:window_index").
