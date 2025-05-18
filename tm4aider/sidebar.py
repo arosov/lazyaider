@@ -611,9 +611,9 @@ class Sidebar(App):
                 self.log.warning(f"Unknown action type '{action_type}' for button ID '{button_id}'")
                 return # Do not proceed to color update if action is unknown
 
-            # After processing any valid plan_sec_ button action, update label colors
-            # This block is now correctly placed after the if/elif chain for action_type
-            if section_index != -1: # Check if section_index was successfully parsed
+            # After processing any valid plan_sec_ button action, update label colors,
+            # but only if the action was not "edit".
+            if section_index != -1 and action_type != "edit": # Check if section_index was parsed AND action is not "edit"
                 try:
                     plan_sections_container_widget = self.query_one("#plan_sections_container", Grid)
                     num_sections = len(plan_sections_container_widget.children)
