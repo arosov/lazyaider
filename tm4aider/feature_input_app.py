@@ -381,16 +381,21 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
             quoted_temp_file_path = f"'{temp_file_path.replace("'", "'\\''")}'" # Basic POSIX sh quoting
             full_editor_command_for_tmux = f"{editor_cmd} {quoted_temp_file_path}"
 
-            # For debugging, show the command that will be run by tmux_utils.run_command_in_new_window_and_wait
-            # The actual command passed to subprocess by tmux_utils will be:
-            # ["tmux", "new-window", "-W", "-n", "TM4Aider-Edit", full_editor_command_for_tmux]
+            # For debugging, show the full command list as it would be passed to subprocess.run
+            # This reflects the current behavior of tmux_utils.run_command_in_new_window_and_wait,
+            # which splits the `command_to_run` string.
+            window_name_for_debug = "TM4Aider-Edit"
+            # Construct the argument list as tmux_utils.py would for _run_tmux_command
+            tmux_util_cmd_args = ["new-window", "-W", "-n", window_name_for_debug] + full_editor_command_for_tmux.split(" ")
+            # _run_tmux_command prepends "tmux"
+            final_subprocess_args_list = ["tmux"] + tmux_util_cmd_args
+            
             self.call_from_thread(
                 self.notify,
-                (f"Attempting to run in new tmux window (and wait):\n"
-                 f"Window Name: TM4Aider-Edit\n"
-                 f"Editor CMD: {full_editor_command_for_tmux}"),
-                title="Debug: External Editor Launch",
-                timeout=15
+                (f"Full tmux command for subprocess.run:\n"
+                 f"{final_subprocess_args_list}"),
+                title="Debug: External Editor Command",
+                timeout=20 # Increased timeout for potentially long list
             )
             
             # Use the utility function from tmux_utils which uses `tmux new-window -W`
