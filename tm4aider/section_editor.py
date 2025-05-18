@@ -79,21 +79,13 @@ def main():
         # The edited_text_result is the new full content for this section.
         # We need to ensure it fits well when reinserted.
         # Markdown sections are typically separated by newlines.
-        # If the original section ended with a newline (and wasn't just a newline itself),
-        # or if there's content after this section in the original document,
-        # the new section should also ideally end with a newline to maintain separation.
+        # The user's exact input from the editor will be used.
+        # The previous normalization logic for trailing newlines has been removed
+        # to ensure that the content saved is exactly what was in the editor.
+        # This gives the user full control but also responsibility for maintaining
+        # correct section separation if they edit trailing newlines.
 
         processed_edited_text = edited_text_result
-        
-        # If the new text is not empty and doesn't end with a newline:
-        if processed_edited_text and not processed_edited_text.endswith('\n'):
-            # Check if the original section was followed by more content,
-            # or if the original section itself ended with a newline (and wasn't just a blank line).
-            original_section_had_trailing_newline = section_text.endswith('\n') and len(section_text) > 1
-            is_followed_by_more_content = end_pos < len(original_content)
-
-            if is_followed_by_more_content or original_section_had_trailing_newline:
-                processed_edited_text += '\n'
         
         # If the new text IS empty, but the original section was not the very end of the file,
         # we might want to ensure there's at least one newline to separate from subsequent content,
