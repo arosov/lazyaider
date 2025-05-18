@@ -72,9 +72,12 @@ def run_command_in_new_window_and_wait(
     """
     Creates a new tmux window, runs a command in it, and waits for the command to complete.
     The tmux `new-window -W` command itself waits for the command run inside the new window.
+    NOTE: If -W is removed due to compatibility with older tmux, this function will no longer wait.
     """
     # command_to_run is a single string argument for tmux new-window
-    cmd_args = ["new-window", "-W", "-n", window_name, command_to_run]
+    # The -W flag is removed to prevent "unknown flag -W" error on tmux < 1.8.
+    # This means the command will NOT wait for the editor to close.
+    cmd_args = ["new-window", "-n", window_name, command_to_run]
     return _run_tmux_command(cmd_args, check=check, capture_output=capture_output, text=text)
 
 def select_window(target_specifier: str) -> bool:
