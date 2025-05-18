@@ -3,7 +3,7 @@ import re # For parsing markdown sections
 from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, VerticalScroll, Vertical, Grid
-from textual.widgets import Button, Footer, Header, Static, Collapsible, Select, Label
+from textual.widgets import Button, Footer, Header, Static, Collapsible, Select, Label, Switch
 # SelectOption import removed
 from tm4aider import tmux_utils
 
@@ -202,6 +202,7 @@ class Sidebar(App):
                     yield Button("Destroy Session", id="btn_quit_session", variant="error")
                 with Collapsible(title="Plan", collapsed=True, id="plan_collapsible"): # New section for Plan
                     yield Select([], id="sel_load_plan", prompt="Load plan...")
+                    yield Switch(name="Use /reset", id="sw_use_reset")
                     yield Grid(id="plan_sections_container") # Container for dynamic plan sections
         yield Footer()
 
