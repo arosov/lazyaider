@@ -390,30 +390,56 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
             process = run_command_in_new_window_and_wait(
                 window_name="TM4Aider-Edit",
                 command_to_run=full_editor_command_for_tmux,
-                capture_output=False, # Changed from True
-                text=True, # Still useful for command_to_run encoding if ever needed by subprocess internals
-                check=False # Explicitly False to match original logic of checking returncode
+                capture_output=False,
+                text=True,
+                check=False
             )
 
+            # After the editor process, check the temp file and exit code
+            temp_file_still_exists = os.path.exists(temp_file_path)
+            updated_text_content = None
+
             if process.returncode != 0:
-                # Since capture_output is False, process.stdout and process.stderr will be None.
-                # Provide a more generic error message based on the exit code.
                 error_message = (
-                    f"External editor process exited with error code {process.returncode}. "
-                    "If the editor didn't open or an error occurred, "
-                    "check your 'text_editor' command in '.tm4aider.conf.yml' "
-                    "and ensure the editor works correctly from a manual tmux new-window."
+                    f"External editor exited with code {process.returncode}. "
+                    "Some editors (e.g., Vim with ':cq') use non-zero exit codes to signal issues. "
                 )
-                self.call_from_thread(self.notify, error_message, title="Editor Error", severity="error", timeout=10)
-                self.call_from_thread(self._update_text_area_from_external, None) # Signal no update
-                return
+                if not temp_file_still_exists:
+                    error_message += "\nAdditionally, the temporary edit file is now missing. Changes were likely lost."
+                    self.call_from_thread(self.notify, error_message, title="Editor Warning/Error", severity="warning", timeout=10)
+                    # No content to load, updated_text_content remains None
+                else:
+                    # File exists, attempt to read it despite non-zero exit code.
+                    # Append a suggestion to check editor behavior to the base error_message.
+                    error_message += "Please check your editor's behavior regarding exit codes. Attempting to load content."
+                    self.call_from_thread(self.notify, error_message, title="Editor Information", severity="information", timeout=10)
+                    try:
+                        with open(temp_file_path, "r", encoding="utf-8") as tmpfile_read:
+                            updated_text_content = tmpfile_read.read()
+                    except Exception as e_read:
+                        read_error_msg = f"Editor exited with {process.returncode}. Could not read temp file: {e_read}"
+                        self.call_from_thread(self.notify, read_error_msg, title="Editor File Read Error", severity="error", timeout=10)
+                        # Content could not be read, updated_text_content remains None
+            else: # process.returncode == 0 (editor exited cleanly)
+                if not temp_file_still_exists:
+                    # This is unexpected if editor exited cleanly
+                    missing_file_msg = "Editor exited cleanly, but the temporary edit file is missing. Changes may have been lost."
+                    self.call_from_thread(self.notify, missing_file_msg, title="Editor Warning", severity="warning", timeout=10)
+                    # No content to load, updated_text_content remains None
+                else:
+                    try:
+                        with open(temp_file_path, "r", encoding="utf-8") as tmpfile_read:
+                            updated_text_content = tmpfile_read.read()
+                    except Exception as e_read:
+                        read_error_msg = f"Could not read temp file after editor exit: {e_read}"
+                        self.call_from_thread(self.notify, read_error_msg, title="File Read Error", severity="error", timeout=10)
+                        # Content could not be read, updated_text_content remains None
+            
+            # Update the text area with whatever content was successfully read (or None)
+            self.call_from_thread(self._update_text_area_from_external, updated_text_content)
 
-            with open(temp_file_path, "r", encoding="utf-8") as tmpfile_read:
-                updated_text = tmpfile_read.read()
-            self.call_from_thread(self._update_text_area_from_external, updated_text)
-
-        except FileNotFoundError: # For tmux command itself
-            self.call_from_thread(self.notify, "Error: 'tmux' command not found. Is tmux installed and in PATH?", title="TMUX Error", severity="error", timeout=10)
+        except FileNotFoundError: # For the 'tmux' command itself not being found
+            self.call_from_thread(self.notify, "Error: 'tmux' command not found. Is tmux installed and in your PATH?", title="TMUX Error", severity="error", timeout=10)
             self.call_from_thread(self._update_text_area_from_external, None)
         except Exception as e:
             self.call_from_thread(self.notify, f"An unexpected error occurred with the external editor: {e}", title="Editor Error", severity="error", timeout=10)
