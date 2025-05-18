@@ -15,7 +15,7 @@ from textual.timer import Timer # Add this import
 # generate_plan is only used in 'create_plan' mode
 # from .llm_planner import generate_plan
 from . import config # Import config to access settings like model name
-from .tmux_utils import run_command_in_new_window_and_wait
+from . import tmux_utils # Import the whole module
 
 class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
     """
