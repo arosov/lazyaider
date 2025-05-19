@@ -39,7 +39,7 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
     def __init__(self,
                  mode: str = "create_plan", # "create_plan" or "edit_section"
                  initial_text: str | None = None,
-                 window_title: str | None = None):
+                 window_title: str | None = "AI Powered plan generation"):
         super().__init__()
         self.mode = mode
         self.initial_text = initial_text
@@ -126,9 +126,9 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
         if self.custom_window_title:
             self.TITLE = self.custom_window_title
         elif self.mode == "edit_section":
-            self.TITLE = "TM4Aider - Edit Section"
+            self.TITLE = "LazyAider - Edit Section"
         else: # create_plan
-            self.TITLE = "TM4Aider - AI Powered Plan Generation"
+            self.TITLE = "LazyAider - AI Powered Plan Generation"
 
 
         # Apply theme from config
@@ -275,7 +275,7 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
         """
         self._llm_worker = None
         plan_display_widget = self.query_one("#plan_display_area", TextArea)
-        
+
         final_display_text = ""
 
         if isinstance(plan_data, tuple):
@@ -372,7 +372,7 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
 
             # Use the utility function from tmux_utils which now uses `wait-for`
             process = tmux_utils.run_command_in_new_window_and_wait(
-                window_name="TM4Aider-Edit", # Name of the new window
+                window_name="lazyaider-Edit", # Name of the new window
                 command_to_run=full_editor_command_for_tmux, # The actual editor command
                 capture_output=False, # For the wait-for command, not usually needed
                 text=True, # For encoding of command_to_run if needed by subprocess for new-window
@@ -455,7 +455,7 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
         if not editor_cmd_str:
             self.notify(
                 "No external text editor is configured.\n"
-                "Set 'text_editor: your_editor_command' in '.tm4aider.conf.yml' (e.g., 'text_editor: nano').",
+                "Set 'text_editor: your_editor_command' in '.lazyaider.conf.yml' (e.g., 'text_editor: nano').",
                 title="External Editor Not Configured",
                 severity="warning",
                 timeout=10
@@ -497,7 +497,7 @@ if __name__ == "__main__":
 
     # Define constants for directory names for testing purposes
     # These are also defined in plan_generator.py; for testing, ensure consistency or pass as args.
-    _TM4AIDER_DIR_NAME_TEST = ".tm4aider"
+    _lazyaider_DIR_NAME_TEST = ".lazyaider"
     _PLANS_SUBDIR_NAME_TEST = "plans"
 
     # Helper functions for plan saving (mirrored from plan_generator.py for test purposes)
@@ -526,7 +526,7 @@ if __name__ == "__main__":
 
     # Ensure your LLM API key (e.g., OPENAI_API_KEY) is set in your environment
     # for the LLM call to succeed during direct testing.
-    # Ensure tm4aider.config and tm4aider.llm_planner are importable.
+    # Ensure lazyaider.config and lazyaider.llm_planner are importable.
     # This might require adjusting PYTHONPATH or running from the project root.
 
     print("Testing FeatureInputApp in 'create_plan' mode.")
@@ -545,7 +545,7 @@ if __name__ == "__main__":
             plan_title = _extract_plan_title_for_test(plan_content)
             sanitized_title = _sanitize_for_path_for_test(plan_title)
 
-            save_dir_path = os.path.join(_TM4AIDER_DIR_NAME_TEST, _PLANS_SUBDIR_NAME_TEST, sanitized_title)
+            save_dir_path = os.path.join(_lazyaider_DIR_NAME_TEST, _PLANS_SUBDIR_NAME_TEST, sanitized_title)
 
             try:
                 os.makedirs(save_dir_path, exist_ok=True)

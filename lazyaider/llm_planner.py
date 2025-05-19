@@ -75,7 +75,7 @@ def generate_plan(
             print(f"Warning: Prompt template file not found at {prompt_override_path}. Using default template.", file=sys.stderr)
         except Exception as e:
             print(f"Warning: Could not load prompt template from {prompt_override_path}: {e}. Using default template.", file=sys.stderr)
-    
+
     # Get the repository map based on the selected method
     repository_map_content = ""
     if repomap_method == "repomix":
@@ -197,9 +197,9 @@ def generate_plan(
 
 if __name__ == '__main__':
     # This part is for testing the module directly.
-    # It requires that the `tm4aider` package (and its config) is discoverable.
+    # It requires that the `lazyaider` package (and its config) is discoverable.
     # You might need to run this from the project root or adjust PYTHONPATH.
-    # Example: python -m tm4aider.llm_planner
+    # Example: python -m lazyaider.llm_planner
 
     print("Testing LLM Planner Module...")
     # Ensure API key is set for the default or configured model
@@ -242,7 +242,7 @@ if __name__ == '__main__':
 
     # Example of how to test with a session-specific prompt (requires config setup)
     # You would need to:
-    # 1. Create/modify .tm4aider.conf.yml to have a session, e.g., "test-session"
+    # 1. Create/modify .lazyaider.conf.yml to have a session, e.g., "test-session"
     #    managed_sessions:
     #      test-session:
     #        plan_generation_prompt_override_path: /path/to/your/test_session_prompt.md

@@ -2,7 +2,7 @@ import os
 import sys
 import yaml
 
-CONFIG_FILENAME = ".tm4aider.conf.yml"
+CONFIG_FILENAME = ".lazyaider.conf.yml"
 
 # Configuration Keys
 KEY_SIDEPANE_PERCENT_WIDTH = "sidepane_percent_width"
@@ -81,7 +81,7 @@ def load_config() -> dict:
         if KEY_THEME_NAME in config: # Value exists but is not a str
             print(f"Warning: '{KEY_THEME_NAME}' in {config_path or 'config'} is not a string. Using default value.", file=sys.stderr)
         config[KEY_THEME_NAME] = DEFAULT_THEME_NAME
-    
+
     if not isinstance(config.get(KEY_LLM_MODEL), str) or not config.get(KEY_LLM_MODEL, "").strip():
         if KEY_LLM_MODEL in config and config.get(KEY_LLM_MODEL) is not None : # Value exists but is not a non-empty str
             print(f"Warning: '{KEY_LLM_MODEL}' in {config_path or 'config'} is not a valid non-empty string. Using default value.", file=sys.stderr)
@@ -112,12 +112,12 @@ def load_config() -> dict:
                 config[KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH] = os.path.abspath(expanded_path)
         else:
             config[KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH] = expanded_path
-    
+
     # Process session-specific plan_generation_prompt_override_path
     for session_name, session_settings in config.get(KEY_MANAGED_SESSIONS, {}).items():
         if not isinstance(session_settings, dict): # Should have been handled already, but defensive
-            continue 
-        
+            continue
+
         session_prompt_path = session_settings.get(KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH)
         if session_prompt_path is not None and not isinstance(session_prompt_path, str):
             print(f"Warning: Session '{session_name}' '{KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH}' in {config_path or 'config'} is not a string or null. Ignoring session override.", file=sys.stderr)

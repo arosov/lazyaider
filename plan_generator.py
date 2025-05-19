@@ -2,11 +2,11 @@ import sys
 import os
 import re
 import argparse # Added for CLI argument parsing
-from tm4aider.feature_input_app import FeatureInputApp
-from tm4aider.llm_planner import generate_plan # Added for non-interactive mode
+from lazyaider.feature_input_app import FeatureInputApp
+from lazyaider.llm_planner import generate_plan # Added for non-interactive mode
 
 # Define global constants for directory names
-TM4AIDER_DIR_NAME = ".tm4aider"
+lazyaider_DIR_NAME = ".lazyaider"
 PLANS_SUBDIR_NAME = "plans"
 
 def _extract_plan_title(markdown_content: str) -> str:
@@ -48,8 +48,8 @@ def _process_and_save_plan(plan_content: str, feature_description: str, session_
     sanitized_title = _sanitize_for_path(plan_title)
 
     # TODO: Consider incorporating session_name into the path if provided and relevant for organization
-    plan_dir = os.path.join(TM4AIDER_DIR_NAME, PLANS_SUBDIR_NAME, sanitized_title)
-    
+    plan_dir = os.path.join(lazyaider_DIR_NAME, PLANS_SUBDIR_NAME, sanitized_title)
+
     try:
         os.makedirs(plan_dir, exist_ok=True)
 
@@ -109,7 +109,7 @@ if __name__ == "__main__":
             sys.exit(1)
 
         print(f"Generating plan non-interactively from: {args.plan_file}", file=sys.stderr)
-        
+
         repomap_method_cli = "repomix" if args.use_repomix else "aider"
         if args.use_repomix:
             print("Using repomix for repository map generation.", file=sys.stderr)

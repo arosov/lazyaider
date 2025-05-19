@@ -75,7 +75,7 @@ def run_command_in_new_window_and_wait(
     """
     import uuid
     # Generate a unique channel name for this wait operation
-    channel_name = f"tm4aider-wait-{uuid.uuid4().hex}"
+    channel_name = f"lazyaider-wait-{uuid.uuid4().hex}"
 
     # The command to run in the new window needs to be wrapped to signal the channel when it's done.
     # sh -c 'your_command_here; tmux wait-for -S our_channel_name'

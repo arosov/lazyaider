@@ -3,16 +3,16 @@ import sys
 import os
 import uuid
 
-from tm4aider.sidebar import Sidebar
-from tm4aider.tmux_sidebar import manage_tmux_session
-from tm4aider import config # Import config module
-from tm4aider import tmux_utils # Import tmux_utils for session_exists
-from tm4aider.session_selector import SessionSelectorApp # Import the new app
+from lazyaider.sidebar import Sidebar
+from lazyaider.tmux_sidebar import manage_tmux_session
+from lazyaider import config # Import config module
+from lazyaider import tmux_utils # Import tmux_utils for session_exists
+from lazyaider.session_selector import SessionSelectorApp # Import the new app
 
 # feature_input_app.FeatureInputApp is no longer directly launched from here.
 # It's used by plan_generator.py and section_editor.py.
 
-DEFAULT_SESSION_BASENAME = "tm4aider-session"
+DEFAULT_SESSION_BASENAME = "lazyaider-session"
 
 def get_unique_session_name(base_name: str) -> str:
     """Generates a unique session name if the base_name already exists."""
@@ -22,7 +22,7 @@ def get_unique_session_name(base_name: str) -> str:
     # For now, let's just return a simple default or a user-provided one.
     # The session selector will handle new name inputs.
     # If no sessions exist, we'll propose a default.
-    
+
     # Check against existing tmux sessions to suggest a truly unique name
     # if we are creating a *new* default one.
     i = 1
@@ -35,7 +35,7 @@ def get_unique_session_name(base_name: str) -> str:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run TM4Aider")
+    parser = argparse.ArgumentParser(description="Run LazyAider")
     parser.add_argument(
         "--run-in-tmux-pane",
         action="store_true",
@@ -69,16 +69,16 @@ if __name__ == "__main__":
         if not args.session_name: # session_name is crucial for the kill-session functionality
             print("Error: --session-name is required when --run-in-tmux-pane is set.", file=sys.stderr)
             sys.exit(1)
-        
+
         SESSION_NAME = args.session_name
         Sidebar.TMUX_TARGET_PANE = args.target_pane
         Sidebar.TMUX_SESSION_NAME = SESSION_NAME # Pass session name to app
         # Pass config to Sidebar so it can remove session on destroy
-        Sidebar.APP_CONFIG = config.settings 
+        Sidebar.APP_CONFIG = config.settings
         app = Sidebar()
         app.run()
     else:
-        # This branch is executed when the user runs `python tm4aider.py` (or equivalent).
+        # This branch is executed when the user runs `python lazyaider.py` (or equivalent).
         # This script now directly proceeds with tmux session management.
         # Plan generation is handled by plan_generator.py
 
@@ -96,7 +96,7 @@ if __name__ == "__main__":
             # Original tmux session management logic starts here
             managed_sessions_dict = config.settings.get(config.KEY_MANAGED_SESSIONS, {})
             all_configured_session_names = list(managed_sessions_dict.keys())
-            
+
             active_managed_sessions = [
                 s_name for s_name in all_configured_session_names if tmux_utils.session_exists(s_name)
             ]
@@ -108,7 +108,7 @@ if __name__ == "__main__":
                     default_session_basename=DEFAULT_SESSION_BASENAME
                 )
                 SESSION_NAME_FROM_SELECTOR = selector_app.run() # This will block until the app exits
-                
+
                 if SESSION_NAME_FROM_SELECTOR is None:
                     print("Session selection cancelled. Exiting.")
                     sys.exit(0)
@@ -137,10 +137,10 @@ if __name__ == "__main__":
 
                         # Update configuration: remove old name, add new name.
                         # These functions handle loading and saving the config.
-                        config.remove_session_from_config(original_name) 
+                        config.remove_session_from_config(original_name)
                         config.add_session_to_config(new_name)
                         print(f"  Updated configuration: removed '{original_name}', added '{new_name}'.")
-                
+
                 SESSION_NAME = SESSION_NAME_FROM_SELECTOR # This is the final name to use
 
                 # Ensure the final SESSION_NAME (selected, created, or renamed) is in config.
@@ -159,7 +159,7 @@ if __name__ == "__main__":
             else: # No active managed sessions found from config, or config is empty/new
                 print("No active managed sessions found. Proposing a new default session.")
                 SESSION_NAME = DEFAULT_SESSION_BASENAME
-                
+
                 current_managed_sessions_dict = config.settings.get(config.KEY_MANAGED_SESSIONS, {})
                 if SESSION_NAME not in current_managed_sessions_dict:
                      print(f"Default session '{SESSION_NAME}' will be created and added to config.")

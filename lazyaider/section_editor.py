@@ -4,14 +4,14 @@ from pathlib import Path
 import re
 
 # Add the project root to sys.path to allow for absolute imports.
-# This assumes section_editor.py is in tm4aider/ and the project root is its parent.
+# This assumes section_editor.py is in lazyaider/ and the project root is its parent.
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from tm4aider.feature_input_app import FeatureInputApp
+from lazyaider.feature_input_app import FeatureInputApp
 
-# Config is loaded when tm4aider.config is imported (e.g., by FeatureInputApp or other modules).
+# Config is loaded when lazyaider.config is imported (e.g., by FeatureInputApp or other modules).
 # This ensures FeatureInputApp can access theme settings.
 
 def extract_section_from_markdown(markdown_content: str, section_index: int) -> tuple[str | None, int, int]:
@@ -86,7 +86,7 @@ def main():
         # correct section separation if they edit trailing newlines.
 
         processed_edited_text = edited_text_result
-        
+
         # If the new text IS empty, but the original section was not the very end of the file,
         # we might want to ensure there's at least one newline to separate from subsequent content,
         # or to remove multiple newlines if the original section had them.
@@ -96,7 +96,7 @@ def main():
         # If it was followed by another section, the `original_content[end_pos:]` will handle that.
 
         new_content = original_content[:start_pos] + processed_edited_text + original_content[end_pos:]
-        
+
         try:
             markdown_file_path.write_text(new_content, encoding="utf-8")
             # Output to stdout can be captured by tmux if needed (e.g., for status messages)
@@ -108,5 +108,5 @@ def main():
         print(f"Edit cancelled for section {section_idx + 1} of {markdown_file_path.name}.", file=sys.stdout)
 
 if __name__ == "__main__":
-    # This allows running `python -m tm4aider.section_editor ...`
+    # This allows running `python -m lazyaider.section_editor ...`
     main()

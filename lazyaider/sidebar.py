@@ -5,12 +5,12 @@ from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, VerticalScroll, Vertical, Grid
 from textual.widgets import Button, Footer, Header, Static, Collapsible, Select, Label, Switch
-from tm4aider import tmux_utils
+from lazyaider import tmux_utils
 
 class Sidebar(App):
     """Task Manager for Aider coding assistant"""
 
-    TITLE = "Sidebar"
+    TITLE = "LazyAider"
     BINDINGS = []
     CSS_PATH = "sidebar.tcss"
 
@@ -33,7 +33,7 @@ class Sidebar(App):
 
     async def on_mount(self) -> None:
         """Apply theme from config when app is mounted."""
-        from tm4aider import config as app_config_module
+        from lazyaider import config as app_config_module
         theme_name_from_config = app_config_module.settings.get(app_config_module.KEY_THEME_NAME, app_config_module.DEFAULT_THEME_NAME)
 
         if theme_name_from_config == "dark":
@@ -55,9 +55,9 @@ class Sidebar(App):
         if previous_selected_value == self.REFRESH_PLAN_LIST_VALUE:
             previous_selected_value = None # Don't treat refresh action as a persistent selection to restore
 
-        tm4aider_dir_name = ".tm4aider"
+        lazyaider_dir_name = ".lazyaider"
         plans_subdir_name = "plans"
-        plans_base_path = Path(tm4aider_dir_name) / plans_subdir_name
+        plans_base_path = Path(lazyaider_dir_name) / plans_subdir_name
 
         plan_options = [(self.REFRESH_PLAN_LIST_PROMPT_TEXT, self.REFRESH_PLAN_LIST_VALUE)] # Always add as first option
         if plans_base_path.is_dir():
@@ -83,7 +83,7 @@ class Sidebar(App):
                 restored_selection = True
             # If not restored from previous, try config (only if TMUX_SESSION_NAME is set)
             elif self.TMUX_SESSION_NAME:
-                from tm4aider import config as app_config_module # Ensure import
+                from lazyaider import config as app_config_module # Ensure import
                 active_plan_name_from_config = app_config_module.settings.get(app_config_module.KEY_MANAGED_SESSIONS, {})\
                     .get(self.TMUX_SESSION_NAME, {})\
                     .get(app_config_module.KEY_SESSION_ACTIVE_PLAN_NAME)
@@ -117,14 +117,14 @@ class Sidebar(App):
     def watch_theme(self, old_theme: str | None, new_theme: str | None) -> None:
         """Saves the theme when it changes."""
         if new_theme is not None:
-            from tm4aider import config as app_config_module
+            from lazyaider import config as app_config_module
             # Only save if it's not one of the built-in ones handled by watch_dark
             if new_theme not in ("light", "dark"):
                 app_config_module.update_theme_in_config(new_theme)
 
     def watch_dark(self, dark: bool) -> None:
         """Saves the theme ("light" or "dark") when App.dark changes."""
-        from tm4aider import config as app_config_module
+        from lazyaider import config as app_config_module
         new_theme_name = "dark" if dark else "light"
         app_config_module.update_theme_in_config(new_theme_name)
 
@@ -278,7 +278,7 @@ class Sidebar(App):
                 self.log.warning("TMUX_SESSION_NAME is not set. Cannot manage plan generator window.")
                 return
 
-            plan_generator_window_name = "tm4aider-plan-gen"
+            plan_generator_window_name = "lazyaider-plan-gen"
             command_to_run = "python plan_generator.py" # Use top-level script
             target_window_specifier = f"{self.TMUX_SESSION_NAME}:{plan_generator_window_name}"
             # Pane 0 is the default initial pane in a new window
@@ -341,7 +341,7 @@ class Sidebar(App):
 
                 # For debug purposes, write each chunk to a separate file
                 try:
-                    debug_dir = Path(".tm4aider") / "debug_chunks"
+                    debug_dir = Path(".lazyaider") / "debug_chunks"
                     debug_dir.mkdir(parents=True, exist_ok=True)
                     plan_name_for_file = self.current_selected_plan_name or "unknown_plan"
                     base_filename = f"plan_{plan_name_for_file}_sec_{section_index}_{action_type}"
@@ -471,7 +471,7 @@ class Sidebar(App):
 
                 except Exception as e:
                     self.log.error(f"Error sending multi-line prompt to tmux: {e}")
-            
+
             elif action_type == "edit":
                 self.log(f"Plan section Edit button: Index {section_index}")
                 try:
@@ -482,9 +482,9 @@ class Sidebar(App):
                         self.log.warning("No plan selected. Cannot determine file to edit.")
                         return
 
-                    tm4aider_dir_name = ".tm4aider" 
+                    lazyaider_dir_name = ".lazyaider"
                     plans_subdir_name = "plans"
-                    plan_dir_path = Path(tm4aider_dir_name) / plans_subdir_name / self.current_selected_plan_name
+                    plan_dir_path = Path(lazyaider_dir_name) / plans_subdir_name / self.current_selected_plan_name
                     active_markdown_filename = f"current-{self.current_selected_plan_name}.md"
                     active_markdown_file_path = plan_dir_path / active_markdown_filename
 
@@ -492,14 +492,14 @@ class Sidebar(App):
                         self.log.error(f"Working plan file not found: {active_markdown_file_path}. Cannot edit.")
                         return
 
-                    editor_window_name = f"tm4aider-edit-s{section_index}-{self.current_selected_plan_name[:10]}"
-                    
+                    editor_window_name = f"lazyaider-edit-s{section_index}-{self.current_selected_plan_name[:10]}"
+
                     # Use sys.executable for robustness, and -m to run module if section_editor is part of package
-                    # Assuming tm4aider.section_editor can be run as a module.
-                    # If section_editor.py is just a script, use "python tm4aider/section_editor.py"
+                    # Assuming lazyaider.section_editor can be run as a module.
+                    # If section_editor.py is just a script, use "python lazyaider/section_editor.py"
                     # For now, stick to the pattern used for plan_generator.py
-                    command_to_run = f"python tm4aider/section_editor.py --file-path \"{active_markdown_file_path.resolve()}\" --section-index {section_index}"
-                    
+                    command_to_run = f"python lazyaider/section_editor.py --file-path \"{active_markdown_file_path.resolve()}\" --section-index {section_index}"
+
                     target_window_specifier = f"{self.TMUX_SESSION_NAME}:{editor_window_name}"
                     target_pane_for_keys = f"{target_window_specifier}.0"
 
@@ -514,7 +514,7 @@ class Sidebar(App):
                     self.log.info(f"Launched section editor for section {section_index} in window '{editor_window_name}'.")
                     self.log.info("IMPORTANT: After editing, re-select the plan from the dropdown to see changes in the sidebar.")
 
-                except FileNotFoundError: 
+                except FileNotFoundError:
                     self.log.error("Error: tmux command not found. Is tmux installed and in PATH?")
                 except subprocess.CalledProcessError as e:
                     self.log.error(f"Error managing tmux window for section editor: {e.stderr.decode() if e.stderr else e}")
@@ -577,15 +577,15 @@ class Sidebar(App):
 
                 # Save selected plan to config
                 if self.TMUX_SESSION_NAME:
-                    from tm4aider import config as app_config_module # late import
+                    from lazyaider import config as app_config_module # late import
                     app_config_module.update_session_active_plan_name(self.TMUX_SESSION_NAME, self.current_selected_plan_name)
                     self.log(f"Saved active plan '{self.current_selected_plan_name}' for session '{self.TMUX_SESSION_NAME}' to config.")
                 else:
                     self.log.warning("TMUX_SESSION_NAME not set. Cannot save active plan to config.")
 
-                tm4aider_dir_name = ".tm4aider"
+                lazyaider_dir_name = ".lazyaider"
                 plans_subdir_name = "plans"
-                plan_dir_path = Path(tm4aider_dir_name) / plans_subdir_name / self.current_selected_plan_name
+                plan_dir_path = Path(lazyaider_dir_name) / plans_subdir_name / self.current_selected_plan_name
 
                 original_markdown_filename = f"{self.current_selected_plan_name}.md"
                 original_markdown_file_path = plan_dir_path / original_markdown_filename
@@ -658,7 +658,7 @@ class Sidebar(App):
 
                 # Clear selected plan from config
                 if self.TMUX_SESSION_NAME:
-                    from tm4aider import config as app_config_module # late import
+                    from lazyaider import config as app_config_module # late import
                     app_config_module.update_session_active_plan_name(self.TMUX_SESSION_NAME, None)
                     self.log(f"Cleared active plan for session '{self.TMUX_SESSION_NAME}' in config.")
                 else:
@@ -671,7 +671,7 @@ class Sidebar(App):
             try:
                 # Remove from config before attempting to kill
                 # Requires config module and settings to be accessible
-                from tm4aider import config as app_config # late import
+                from lazyaider import config as app_config # late import
                 app_config.remove_session_from_config(session_to_kill)
                 self.log(f"Removed session '{session_to_kill}' from config.")
 

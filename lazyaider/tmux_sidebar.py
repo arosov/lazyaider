@@ -6,7 +6,7 @@ from . import config # Import the new config module
 
 def manage_tmux_session(session_name: str, app_command: str, shell_pane_target: str, app_pane_target: str):
     """
-    Manages the tmux session for TM4Aider.
+    Manages the tmux session for lazyaider.
     Creates a new session if one doesn't exist, or restarts the app in an existing session.
     Then attaches to the session.
     """
@@ -39,7 +39,7 @@ def manage_tmux_session(session_name: str, app_command: str, shell_pane_target: 
             tmux_utils.send_keys_to_pane(app_pane_target, "Enter", capture_output=False)
         else:
             # Session exists
-            print(f"Session {session_name} exists. Restarting TM4Aider in the right pane.")
+            print(f"Session {session_name} exists. Restarting lazyaider in the right pane.")
             # Send app_command to app_pane_target to restart/ensure it's running
             tmux_utils.send_keys_to_pane(app_pane_target, app_command, capture_output=False)
             tmux_utils.send_keys_to_pane(app_pane_target, "Enter", capture_output=False)

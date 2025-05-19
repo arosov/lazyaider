@@ -135,7 +135,7 @@ class SessionListView(ListView):
 class SessionSelectorApp(App[str | None]):
     """A Textual app to select an existing tmux session or create/rename one."""
 
-    TITLE = "TM4Aider Session Management"
+    TITLE = "lazyaider Session Management"
     BINDINGS = [
         Binding("enter", "try_select_session_with_enter", "Use Selected", show=False),
     ]
@@ -155,14 +155,14 @@ class SessionSelectorApp(App[str | None]):
     def watch_theme(self, old_theme: str | None, new_theme: str | None) -> None:
         """Saves the theme when it changes."""
         if new_theme is not None:
-            from tm4aider import config as app_config_module
+            from lazyaider import config as app_config_module
             # Only save if it's not one of the built-in ones handled by watch_dark
             if new_theme not in ("light", "dark"):
                 app_config_module.update_theme_in_config(new_theme)
 
     def watch_dark(self, dark: bool) -> None:
         """Saves the theme ("light" or "dark") when App.dark changes."""
-        from tm4aider import config as app_config_module
+        from lazyaider import config as app_config_module
         new_theme_name = "dark" if dark else "light"
         app_config_module.update_theme_in_config(new_theme_name)
 
@@ -204,7 +204,7 @@ class SessionSelectorApp(App[str | None]):
     async def on_mount(self) -> None: # Make async
         """Called when app is mounted."""
         # Apply theme from config when app is mounted
-        from tm4aider import config as app_config_module
+        from lazyaider import config as app_config_module
         theme_name_from_config = app_config_module.settings.get(app_config_module.KEY_THEME_NAME, app_config_module.DEFAULT_THEME_NAME)
         if theme_name_from_config == "dark":
             self.dark = True
@@ -375,7 +375,7 @@ class SessionSelectorApp(App[str | None]):
                 self.default_session_basename,
                 self.active_sessions
             )
-            # Exit with the new session name. The caller (tm4aider.py) will handle
+            # Exit with the new session name. The caller (lazyaider.py) will handle
             # the actual creation and config update.
             self.exit(new_session_name)
 
