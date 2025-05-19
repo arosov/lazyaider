@@ -1,6 +1,6 @@
 #app-container {
     width: 100%;
-    height: 100%;
+    height: 1fr;
     padding: 1 2;
     align: center top;
 }
@@ -13,13 +13,18 @@
     padding: 1; 
 }
 #loading_container { 
-    padding-top: 5; /* More space above spinner */
-    height: auto; /* Let content define height */
-    align: center middle; 
+    align: center middle; /* Center content (spinner & text) vertically and horizontally */
+    height: 100%;
 }
 #loading_subtext { 
     width: 100%; 
     text-align: center; 
+    align: center top;
+    height: auto;
+    margin-top: 1; /* Add space between spinner and text */
+}
+#spinner {
+   height: 1;
 }
 .label { 
     width: 100%; 
@@ -35,10 +40,9 @@ TextArea {
     margin-bottom: 1; 
 }
 #feature_description_input { 
-    height: 1fr; /* Take remaining vertical space in its container */
-}
+    height: 1fr; }
 #plan_display_area { 
-    height: 1fr; /* Take remaining vertical space in its container */
+    height: 1fr;
 }
 TextArea:focus { 
     border: round $accent; 

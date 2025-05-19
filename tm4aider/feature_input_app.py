@@ -275,44 +275,33 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
         """
         self._llm_worker = None
         plan_display_widget = self.query_one("#plan_display_area", TextArea)
-        plan_display_widget.clear()
+        
+        final_display_text = ""
 
         if isinstance(plan_data, tuple):
             plan_content, model_name, token_count = plan_data
             self.generated_plan_content = plan_content # Store the actual plan for exit
 
-            display_text = plan_content
-            display_text += f"\n\n---\nModel used: {model_name}"
+            final_display_text = plan_content
+            final_display_text += f"\n\n---\nModel used: {model_name}"
             if token_count is not None:
-                display_text += f"\nToken usage: {token_count} tokens"
+                final_display_text += f"\nToken usage: {token_count} tokens"
             else:
-                display_text += f"\nToken usage: N/A"
-            plan_display_widget.load_text(display_text)
+                final_display_text += f"\nToken usage: N/A"
         else: # It's an error string
             self.generated_plan_content = plan_data # Store the error message
-            plan_display_widget.load_text(plan_data)
+            final_display_text = plan_data
 
         if self._loading_timer is not None:
             self._loading_timer.stop()
             self._loading_timer = None
 
-        total_elapsed_time_str = ""
-        if self._llm_call_start_time is not None: # Use renamed variable
-            total_elapsed_time = time.monotonic() - self._llm_call_start_time # Use renamed variable
-            total_elapsed_time_str = f"\nTime taken: {total_elapsed_time:.2f} seconds"
-            self._llm_call_start_time = None # Reset for next run
+        if self._llm_call_start_time is not None:
+            total_elapsed_time = time.monotonic() - self._llm_call_start_time
+            final_display_text += f"\nTime taken: {total_elapsed_time:.2f} seconds"
+            self._llm_call_start_time = None
 
-        if isinstance(plan_data, tuple):
-            # Append time taken to the existing display_text for successful plan
-            current_text = plan_display_widget.text
-            plan_display_widget.load_text(current_text + total_elapsed_time_str)
-        else:
-            # For error messages, also append the time taken if available
-            current_text = plan_display_widget.text # This is the error message text
-            if total_elapsed_time_str: # Only append if time was actually calculated
-                plan_display_widget.load_text(current_text + total_elapsed_time_str)
-            # If total_elapsed_time_str is empty (e.g. _llm_call_start_time was None),
-            # just the error message (already loaded) will be shown.
+        plan_display_widget.load_text(final_display_text) # Load the fully constructed text
 
         self._set_ui_state(self.STATE_DISPLAY_PLAN)
         # Reset loading subtext for next time
