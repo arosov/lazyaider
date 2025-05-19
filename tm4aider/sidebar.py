@@ -297,17 +297,16 @@ class Sidebar(App):
 
     def _parse_section_content_chunks(self, section_content: str) -> dict[str, str]:
         """
-        Parses section content into 'files_md', 'goals', and 'instructions' chunks.
-        Chunks are expected to be separated by an empty line.
+        Parses section content into 'files_md' and 'prompt_content' chunks.
+        The 'files_md' chunk is everything before the first double newline.
+        The 'prompt_content' chunk is everything after the first double newline.
         """
-        parts = section_content.strip().split('\n\n', 2)
+        parts = section_content.strip().split('\n\n', 1)
         files_md = parts[0] if len(parts) > 0 else ""
-        goals = parts[1] if len(parts) > 1 else ""
-        instructions = parts[2] if len(parts) > 2 else ""
+        prompt_content = parts[1] if len(parts) > 1 else ""
         return {
             "files_md": files_md,
-            "goals": goals,
-            "instructions": instructions,
+            "prompt_content": prompt_content,
         }
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -421,8 +420,7 @@ class Sidebar(App):
                 # Parse section content into chunks
                 content_chunks = self._parse_section_content_chunks(section_content)
                 files_md_chunk = content_chunks["files_md"]
-                goals_chunk = content_chunks["goals"]
-                instructions_chunk = content_chunks["instructions"]
+                prompt_chunk = content_chunks["prompt_content"]
 
                 # For debug purposes, write each chunk to a separate file
                 try:
@@ -432,12 +430,10 @@ class Sidebar(App):
                     base_filename = f"plan_{plan_name_for_file}_sec_{section_index}_{action_type}"
 
                     files_debug_path = debug_dir / f"{base_filename}_files.md"
-                    goals_debug_path = debug_dir / f"{base_filename}_goals.txt"
-                    instructions_debug_path = debug_dir / f"{base_filename}_instructions.txt"
+                    prompt_debug_path = debug_dir / f"{base_filename}_prompt.txt"
 
                     files_debug_path.write_text(files_md_chunk, encoding="utf-8")
-                    goals_debug_path.write_text(goals_chunk, encoding="utf-8")
-                    instructions_debug_path.write_text(instructions_chunk, encoding="utf-8")
+                    prompt_debug_path.write_text(prompt_chunk, encoding="utf-8")
                     self.log(f"Saved content chunks for sec {section_index} to {debug_dir}")
                 except Exception as e:
                     self.log.error(f"Error saving debug chunk files: {e}")
@@ -522,21 +518,12 @@ class Sidebar(App):
                 # This strongly implies: `/ask <content_here>`
                 # So, the content MUST be on one line or escaped.
                 # Let's replace newlines with a space for the prompt.
-                # Construct the full prompt content from goals and instructions
-                full_prompt_parts = []
-                stripped_goals = goals_chunk.strip()
-                stripped_instructions = instructions_chunk.strip()
-
-                if stripped_goals:
-                    full_prompt_parts.append(stripped_goals)
-                if stripped_instructions:
-                    full_prompt_parts.append(stripped_instructions)
-
-                full_prompt_content = "\n\n".join(full_prompt_parts)
+                # The full prompt content is now directly from the prompt_chunk.
+                full_prompt_content = prompt_chunk.strip()
 
                 try:
-                    if not full_prompt_content.strip(): # Check if combined content is empty
-                        self.log.warning(f"Both goals and instructions for section {section_index} are empty. Sending command prefix '{aider_command_prefix.strip()}' only.")
+                    if not full_prompt_content: # Check if content is empty
+                        self.log.warning(f"Prompt content for section {section_index} is empty. Sending command prefix '{aider_command_prefix.strip()}' only.")
                         tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, aider_command_prefix.strip())
                         tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter")
                         return
@@ -550,17 +537,23 @@ class Sidebar(App):
 
                     # Send subsequent prompt lines with M-Enter
                     for i, line in enumerate(prompt_lines[1:]):
-                        if line.strip():
-                            tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "M-Enter") # Alt+Enter for newline in prompt
-                            tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f" {line}")
+                        # Send M-Enter only if the line is not empty.
+                        # If the line is empty, sending M-Enter then a space might be undesirable.
+                        # Aider might interpret an empty line in a multi-line prompt as significant.
+                        # For now, send M-Enter then the line (even if empty, but stripped of leading/trailing space by `split`).
+                        # If a line is truly just whitespace, `line.strip()` would be empty.
+                        # The original code sent `f" {line}"` which adds a leading space.
+                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "M-Enter") # Alt+Enter for newline in prompt
+                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f"{line}") # Send the line as is
                         self.log(f"Sent to Aider (prompt line {i+2}): {line[:50]}...")
+
 
                     # Finally, send Enter to submit the whole command
                     tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter")
-                    self.log(f"Submitted multi-line command to Aider for section {section_index} ({action_type}) using combined goals and instructions.")
+                    self.log(f"Submitted multi-line command to Aider for section {section_index} ({action_type}) using prompt content.")
 
                 except Exception as e:
-                    self.log.error(f"Error sending multi-line prompt (goals/instructions) to tmux: {e}")
+                    self.log.error(f"Error sending multi-line prompt to tmux: {e}")
             
             elif action_type == "edit":
                 self.log(f"Plan section Edit button: Index {section_index}")
