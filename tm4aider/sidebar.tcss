@@ -1,0 +1,70 @@
+Screen {
+    layout: vertical;
+}
+Horizontal#main_layout {
+    background: $primary-background-lighten-1;
+}
+#sidebar {
+    width: 100%;
+    padding: 1;
+    border-left: thick $primary-background-darken-2;
+    background: $primary-background-lighten-1;
+}
+#controls_collapsible Button {
+    width: 100%;
+    margin-bottom: 0;
+    margin-right: 4;
+}
+#sel_load_plan {
+    margin-right: 4;
+}
+#reset_switch_container {
+    height: auto; 
+    align: left middle; 
+    margin-bottom: 0; 
+}
+#reset_switch_container Switch {
+    width: auto; 
+}
+#reset_switch_container Label {
+    margin-left: 1; 
+    margin-top: 1; 
+    width: auto; 
+}
+#plan_sections_container {
+    padding: 0 0; 
+    height: auto; 
+    grid-size: 1; 
+    grid-rows: auto; 
+}
+#plan_sections_container Label {
+    margin: 1 0 0 0; 
+    text-style: italic;
+    width: 100%; 
+    height: auto; 
+}
+#plan_sections_container Horizontal {
+    align: left top;
+    margin: 0 0 0 0; 
+    height: auto; 
+}
+.plan_section_item_container {
+    height: auto; 
+    align: left top; 
+    margin-bottom: 0; 
+}
+.plan_action_button {
+    margin-right: 0; 
+    min-width: 6; 
+    padding: 0 0; 
+}
+.edit_button_style {
+    margin-left: 1;
+}
+#plan_collapsible {
+    align: left top; 
+}
+#plan_collapsible > .collapsible-content {
+    align: left top; 
+    height: auto; 
+}

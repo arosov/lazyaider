@@ -5,92 +5,14 @@ from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, VerticalScroll, Vertical, Grid
 from textual.widgets import Button, Footer, Header, Static, Collapsible, Select, Label, Switch
-# SelectOption import removed
 from tm4aider import tmux_utils
 
 class Sidebar(App):
     """Task Manager for Aider coding assistant"""
 
     TITLE = "Sidebar"
-    BINDINGS = []  # Removed Ctrl+C binding
-    CSS = """
-    Screen {
-        layout: vertical;
-    }
-    Horizontal#main_layout {
-        background: $primary-background-lighten-1; /* Slightly different background for sidebar */
-    }
-    #sidebar {
-        width: 100%;
-        padding: 1;
-        border-left: thick $primary-background-darken-2;
-        background: $primary-background-lighten-1; /* Slightly different background for sidebar */
-    }
-    /* .sidebar-title is removed as Collapsible provides its own title */
-    #controls_collapsible Button { /* Style buttons inside the Controls Collapsible */
-        width: 100%;
-        margin-bottom: 0;
-        margin-right: 4;
-    }
-    #sel_load_plan {
-        margin-right: 4;
-    }
-    #reset_switch_container {
-        height: auto; /* Wrap content */
-        align: left middle; /* Align switch and label */
-        margin-bottom: 0; /* Space below the switch */
-    }
-    #reset_switch_container Switch {
-        width: auto; /* Shrink to fit content */
-    }
-    #reset_switch_container Label {
-        margin-left: 1; /* Space between switch and label */
-        margin-top: 1; /* Space between switch and label */
-        width: auto; /* Shrink to fit content */
-    }
-    #plan_sections_container {
-        padding: 0 0; /* Add some padding around the sections */
-        height: auto; /* Explicitly wrap content */
-        /* Grid properties for a single column layout where rows wrap content */
-        grid-size: 1; /* Defines one column */
-        grid-rows: auto; /* Each row takes the height of its content */
-    }
-    #plan_sections_container Label {
-        margin: 1 0 0 0; /* Margin for section titles */
-        text-style: italic;
-        width: 100%; /* Ensure label wraps within its container */
-        height: auto; /* Explicitly wrap content (label + buttons horizontal) */
-    }
-    #plan_sections_container Horizontal {
-        align: left top;
-        margin: 0 0 0 0; /* Margin for button groups */
-        height: auto; /* Explicitly wrap content (label + buttons horizontal) */
-    }
-    .plan_section_item_container {
-    }
-    .plan_section_item_container {
-        height: auto; /* Explicitly wrap content (label + buttons horizontal) */
-        align: left top; /* Align label and buttons horizontal to the top-left */
-        margin-bottom: 0; /* Add some space between plan items */
-    }
-    .plan_action_button {
-        margin-right: 0; /* Space between action buttons */
-        min-width: 6; /* Removed as auto width is desired */
-        padding: 0 0; /* Reduce inner padding: 0 for top/bottom, 1 for left/right */
-    }
-    .edit_button_style {
-        margin-left: 1;
-    }
-    #plan_collapsible {
-        align: left top; /* Aligns the title and the content box to top-left */
-        /* overflow_y: auto; /* Removed to let the parent VerticalScroll handle scrolling */
-        /* Rely on default height behavior for Collapsible widget. */
-    }
-    #plan_collapsible > .collapsible-content {
-        align: left top; /* Aligns children (Select, plan_sections_container) to top-left */
-        height: auto; /* Explicitly set to wrap content */
-    }
-    """
+    BINDINGS = []
+    CSS_PATH = "sidebar.tcss"
 
     # These will be set dynamically when the app is launched by the main script logic
     TMUX_TARGET_PANE: str | None = None
@@ -271,11 +193,6 @@ class Sidebar(App):
         # - (?:[a-zA-Z0-9_.-]+/)* : Optional directory structure (e.g., "dir1/dir2/")
         # - [a-zA-Z0-9_.-]+       : File name part
         # - \.                    : Literal dot for extension
-        # - [a-zA-Z0-9_.-]+       : File extension part
-        # Wrapped in `[\s\`'\"\(]` and `[\s\`'\"\,\.\)]?` to avoid capturing these as part of the path
-        # and to allow paths to be at the start/end of lines or surrounded by common delimiters.
-        # The actual path is in group 1.
-        # Adjusted to be less greedy and more specific to typical file path characters.
         # Extracts file paths from a markdown bullet list.
         # e.g., "- path/to/file.py", "* `another/file.rs`"
         extracted_paths = []

@@ -2,104 +2,75 @@
     width: 100%;
     height: 100%;
     padding: 1 2;
-    align: center top; /* Align content to the top */
-}
-
-.hidden {
-    display: none !important; /* Use !important to ensure override if needed */
-}
-
-#feature_input_container, #loading_container, #plan_display_container {
-    width: 100%;
-    /* height: 100%; */ /* Allow natural height based on content */
     align: center top;
-    padding: 1;
-    /* gap: 1; */ /* Removed: 'gap' property caused an error. Manage spacing with padding/margins. */
 }
-
-/* Make feature input and plan display containers take available vertical space */
-#feature_input_container {
-    height: 1fr;
+.hidden { 
+    display: none !important; 
 }
-#plan_display_container {
-    height: 1fr;
+#feature_input_container, #loading_container, #plan_display_container {
+    width: 100%; 
+    align: center top; 
+    padding: 1; 
+    gap: 1; /* Textual will manage spacing for layouts like Vertical/Horizontal */
 }
-
-#loading_container {
-    width: 100%;
-    align: center middle; /* Center loading indicator and text vertically and horizontally */
-    padding-top: 3; /* Space above the spinner */
-    /* Let height be determined by content + padding */
+#loading_container { 
+    padding-top: 5; /* More space above spinner */
+    height: auto; /* Let content define height */
+    align: center middle; 
 }
-
-#spinner { /* Style for the LoadingIndicator widget */
-    width: 100%;
-    height: 1; /* Spinner itself is usually one line */
-    text-align: center; /* Center the spinner dots */
-    margin-bottom: 1; /* Space between spinner and subtext */
-    /* Removed debug background */
+#loading_subtext { 
+    width: 100%; 
+    text-align: center; 
 }
-
-#loading_subtext {
-    width: 100%;
-    text-align: center;
-    color: $text-muted; /* Revert to original muted color for subtext */
-    /* Removed debug background and explicit height */
+.label { 
+    width: 100%; 
+    text-align: center; 
+    padding: 1 0; 
+    text-style: bold;
 }
-
-.label {
-    width: 100%;
-    text-align: center;
-    padding: 1 0;
-    text-style: bold; /* Use text-style for bolding in Textual CSS */
+TextArea { 
+    width: 100%; /* Take full width of parent */
+    max-width: 100%; 
+    height: 15; /* Default height */
+    border: round $primary; 
+    margin-bottom: 1; 
 }
-
-TextArea {
-    width: 100%; /* Use full available width */
-    max-width: 100%; /* Ensure it doesn't overflow small terminals */
-    height: 15; /* Default height, can be overridden */
-    border: round $primary;
-    margin-bottom: 1; /* Add some space below text areas */
+#feature_description_input { 
+    height: 1fr; /* Take remaining vertical space in its container */
 }
-#feature_description_input {
-    height: 1fr; /* Maximize height within its container */
+#plan_display_area { 
+    height: 1fr; /* Take remaining vertical space in its container */
 }
-#plan_display_area {
-    height: 1fr; /* Maximize height within its container */
+TextArea:focus { 
+    border: round $accent; 
 }
-
-TextArea:focus {
-    border: round $accent; /* Use accent color for focus, respects theme */
-}
-
 /* Styling for error state on TextArea */
-TextArea.-error-border {
+TextArea.-error-border { /* Class to be added dynamically */
     border: heavy red;
     border-title-color: red;
-    border-title-style: bold;
+    border-title-style: bold; /* if border-title is used */
+}
+.button-container { 
+    width: 100%; 
+    max-width: 100%; 
+    align-horizontal: center; /* Center buttons within the container */
+    padding-top: 1; 
+    height: auto; 
+    layout: horizontal;
+    gap: 1; /* Spacing between buttons */
+}
+Button { 
+    width: auto; /* Buttons wrap their content */
 }
 
 #repomap_method_radioset {
-    width: 30; /* Make the RadioSet wrap its content */
-    margin-right: 2; /* Space between RadioSet and the Generate Plan button */
-    /* RadioSet arranges its RadioButtons vertically by default */
+    width: auto; /* Let RadioSet size to its content */
+    height: auto;
+    margin-right: 2; /* Space between RadioSet and Generate Plan button */
 }
 
-.button-container {
-    width: 100%; /* Ensure container takes full width for centering its children */
-    max-width: 100%;
-    /* align: center middle; /* Removed - parent container handles this block's alignment */
-    padding-top: 1;
-    height: auto; /* Allow buttons to define height */
-    layout: horizontal;
-    /* grid-size: 2; */ /* For two buttons - REMOVED to allow auto-width button centering */
-    /* grid-gutter: 1; */ /* Spacing between buttons in the grid - REMOVED */
-    align-horizontal: center; /* ADDED - To center the group of auto-width buttons */
-}
-
-Button {
-    /* width: 100%; */ /* REMOVED - Was for making buttons fill grid cells */
-    width: auto; /* ADDED - Buttons now wrap their content */
-    margin: 0 1; /* ADDED - Provides spacing around each button (e.g., 2 units between adjacent buttons) */
-    /* margin: 0 1%; */ /* Comment remains, still not needed */
+#repomap_method_radioset RadioButton {
+    width: auto; /* Let RadioButton size to its content */
+    margin-right: 1; /* Space between radio buttons if they were horizontal */
+                     /* For vertical, this might not be needed, but doesn't hurt */
 }

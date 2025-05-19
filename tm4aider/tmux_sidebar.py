@@ -31,7 +31,7 @@ def manage_tmux_session(session_name: str, app_command: str, shell_pane_target: 
             tmux_utils.new_session(session_name, window_name="main", term_width=term_width, term_height=term_height)
 
             # Split pane 0.0 (shell_pane_target) horizontally. New pane (app_pane_target) is to the right.
-            sidepane_width_percent = config.settings.get("sidepane_percent_width", config.DEFAULT_SIDEPANE_PERCENT_WIDTH)
+            sidepane_width_percent = config.settings.get(config.KEY_SIDEPANE_PERCENT_WIDTH, config.DEFAULT_SIDEPANE_PERCENT_WIDTH)
             tmux_utils.split_window(shell_pane_target, horizontal=True, size_specifier=f"{sidepane_width_percent}%")
             # app_command is now defined before the try block.
             # The following send_keys will use it to start the app in the new pane.

@@ -2,9 +2,8 @@ import os
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll, Container # VerticalScroll is not used, but keep for now if other parts might use it.
 from textual.widgets import Button, Footer, Header, Label, Input, Static, ListView, ListItem
-# ListView is already imported above, removing redundant/incorrect import.
 from textual.validation import Regex, Validator, ValidationResult
-from textual.css.query import NoMatches # Changed from textual.errors import QueryError
+from textual.css.query import NoMatches
 from textual.screen import ModalScreen
 from textual.binding import Binding # For potential future use
 
@@ -27,34 +26,7 @@ class SessionNameValidator(Validator):
 class RenameSessionScreen(ModalScreen[str | None]):
     """A modal screen to rename a session."""
 
-    CSS = """
-    RenameSessionScreen {
-        align: center middle;
-    }
-
-    #rename_dialog {
-        width: 60;
-        height: auto;
-        border: thick $primary;
-        background: $surface;
-        padding: 1 2;
-    }
-
-    Input { /* Style for Input within this modal */
-        margin-bottom: 1;
-    }
-    .button_row { /* Style for button row within this modal */
-        width: 100%;
-        layout: horizontal; /* Ensure buttons are laid out horizontally */
-        align-horizontal: center; /* Center buttons horizontally */
-        margin-top: 1;
-    }
-
-    Button { /* Style for Buttons within this modal */
-        width: auto; /* Buttons wrap their content */
-        margin: 0 1; /* Consistent margin */
-    }
-    """
+    # CSS is now in session_selector.tcss
 
     def __init__(self, current_name: str, existing_sessions: list[str]):
         super().__init__()
@@ -165,43 +137,9 @@ class SessionSelectorApp(App[str | None]):
 
     TITLE = "TM4Aider Session Management"
     BINDINGS = [
-        Binding("enter", "try_select_session_with_enter", "Use Selected", show=False), # Removed priority=True
+        Binding("enter", "try_select_session_with_enter", "Use Selected", show=False),
     ]
-    CSS = """
-    Screen {
-        align: center middle;
-    }
-    #dialog {
-        width: 60;
-        height: auto;
-        max-height: 80%;
-        border: thick $primary;
-        background: $surface;
-        padding: 1 2;
-    }
-    #session_list_view {
-        height: auto;
-        max-height: 10; /* Limit height of list view */
-        margin-bottom: 1;
-        border: round $primary-lighten-2;
-    }
-    Input {
-        margin-bottom: 1;
-    }
-    Label {
-        margin-bottom: 1;
-    }
-    .button_row {
-        width: 100%;
-        layout: horizontal; /* Ensure buttons are laid out horizontally */
-        align-horizontal: center; /* Center buttons horizontally */
-        margin-top: 1;
-    }
-    Button {
-        width: auto; /* Buttons wrap their content */
-        margin: 0 1; /* Consistent margin */
-    }
-    """
+    CSS_PATH = "session_selector.tcss"
 
     def __init__(self, active_sessions: list[str], default_session_basename: str):
         super().__init__()
@@ -322,8 +260,8 @@ class SessionSelectorApp(App[str | None]):
                 list_item = ListItem(Label(session_name), name=session_name)
                 list_view.append(list_item)
         except NoMatches:
-            # This might happen if the list view isn't present (e.g. no active sessions at start)
-            # Or if called at an unexpected time.
+            # This might happen if the list view isn't present (e.g., no active sessions at start)
+            # or if called at an unexpected time.
             pass
 
     async def on_list_view_selected(self, event: ListView.Selected) -> None: # Renamed from on_list_item_selected

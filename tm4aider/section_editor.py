@@ -3,16 +3,16 @@ import sys
 from pathlib import Path
 import re
 
-# Add the project root to sys.path to allow for absolute imports like 'from tm4aider.module import ...'
-# This assumes section_editor.py is in tm4aider/ and the project root is its parent directory.
+# Add the project root to sys.path to allow for absolute imports.
+# This assumes section_editor.py is in tm4aider/ and the project root is its parent.
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from tm4aider.feature_input_app import FeatureInputApp # Assumes FeatureInputApp is refactored
+from tm4aider.feature_input_app import FeatureInputApp
 
-# Ensure config is loaded for FeatureInputApp's theme settings, etc.
-# This happens when tm4aider.config is imported by FeatureInputApp.
+# Config is loaded when tm4aider.config is imported (e.g., by FeatureInputApp or other modules).
+# This ensures FeatureInputApp can access theme settings.
 
 def extract_section_from_markdown(markdown_content: str, section_index: int) -> tuple[str | None, int, int]:
     """

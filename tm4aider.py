@@ -1,7 +1,7 @@
 import argparse
 import sys
 import os
-import uuid # For generating unique default session names if needed
+import uuid
 
 from tm4aider.sidebar import Sidebar
 from tm4aider.tmux_sidebar import manage_tmux_session
@@ -9,9 +9,8 @@ from tm4aider import config # Import config module
 from tm4aider import tmux_utils # Import tmux_utils for session_exists
 from tm4aider.session_selector import SessionSelectorApp # Import the new app
 
-# Import the new TUI app for feature input and plan generation
-# from tm4aider.feature_input_app import FeatureInputApp # No longer used directly here
-
+# feature_input_app.FeatureInputApp is no longer directly launched from here.
+# It's used by plan_generator.py and section_editor.py.
 
 DEFAULT_SESSION_BASENAME = "tm4aider-session"
 

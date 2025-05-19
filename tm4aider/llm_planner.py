@@ -1,10 +1,10 @@
 import litellm
 import os
 import sys
-import subprocess # Add this import
+import subprocess
 from . import config # Use relative import for config within the same package
-from .prompt import PLAN_GENERATION_PROMPT_TEMPLATE as DEFAULT_PLAN_GENERATION_PROMPT_TEMPLATE # Import and alias
-from .aider_utils import get_aider_repo_map # Import the function to get the repo map
+from .prompt import PLAN_GENERATION_PROMPT_TEMPLATE as DEFAULT_PLAN_GENERATION_PROMPT_TEMPLATE
+from .aider_utils import get_aider_repo_map
 
 def generate_plan(
     feature_description: str,

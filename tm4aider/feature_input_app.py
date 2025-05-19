@@ -1,7 +1,7 @@
 import functools
-import time # Add this import
-import re # Add this import
-import shutil # Add this import
+import time
+import re
+import shutil
 import tempfile
 import os
 import subprocess
@@ -514,15 +514,16 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
 if __name__ == "__main__":
     # This __main__ block is for direct testing of the FeatureInputApp.
     # It primarily tests the "create_plan" mode.
-    # To test "edit_section" mode, you might run section_editor.py directly,
-    # or add CLI arguments here to switch modes for testing.
+    # For "edit_section" mode, you might run section_editor.py directly.
     import os
 
     # Define constants for directory names for testing purposes
-    TM4AIDER_DIR_NAME_TEST = ".tm4aider"
-    PLANS_SUBDIR_NAME_TEST = "plans"
+    # These are also defined in plan_generator.py; for testing, ensure consistency or pass as args.
+    _TM4AIDER_DIR_NAME_TEST = ".tm4aider"
+    _PLANS_SUBDIR_NAME_TEST = "plans"
 
     # Helper functions for plan saving (mirrored from plan_generator.py for test purposes)
+    # Consider moving these to a shared test utility if used in multiple test scripts.
     def _extract_plan_title_for_test(markdown_content: str) -> str:
         """Extracts the plan title from the first H1 header in markdown."""
         lines = markdown_content.splitlines()
@@ -545,53 +546,18 @@ if __name__ == "__main__":
             return "default-plan-title"
         return text
 
-    # Determine the directory of the current script
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    css_file_path = os.path.join(script_dir, "feature_input_app.tcss")
-
-    # Ensure your OPENAI_API_KEY (or other LLM provider key) is set in your environment
-    # if you want the LLM call to succeed during direct testing.
-    # Also, ensure tm4aider.config and tm4aider.llm_planner are importable from this context.
+    # Ensure your LLM API key (e.g., OPENAI_API_KEY) is set in your environment
+    # for the LLM call to succeed during direct testing.
+    # Ensure tm4aider.config and tm4aider.llm_planner are importable.
     # This might require adjusting PYTHONPATH or running from the project root.
-    # For simplicity, this example assumes `litellm` and `tm4aider` modules are accessible.
 
-    # Create/update dummy CSS file for testing if it doesn't exist
-    css_content = """
-    #app-container {
-        width: 100%;
-        height: 100%;
-        padding: 1 2;
-        align: center top;
-    }
-    .hidden { display: none !important; }
-    #feature_input_container, #loading_container, #plan_display_container {
-        width: 100%; align: center top; padding: 1; gap: 1;
-    }
-    #loading_container { padding-top: 5; height: 20; align: center middle; }
-    #loading_subtext { width: 100%; text-align: center; }
-    .label { width: 100%; text-align: center; padding: 1 0; }
-    TextArea { width: 90%; max-width: 100%; height: 15; border: round $primary; margin-bottom: 1; }
-    #feature_description_input { height: 10; }
-    #plan_display_area { height: 20; }
-    TextArea:focus { border: round $primary-focus; }
-    .button-container { width: 90%; max-width: 100%; align: center middle; padding-top: 1; height: auto; layout: horizontal; grid-size: 2; grid-gutter: 1; }
-    Button { width: 100%; }
-    """
-    os.makedirs(os.path.dirname(css_file_path), exist_ok=True)
-    try:
-        with open(css_file_path, "w") as f:
-            f.write(css_content)
-        print(f"Ensure CSS is present/updated at {css_file_path}")
-    except IOError as e:
-        print(f"Could not write CSS to {css_file_path}: {e}")
-
-    print("Testing FeatureInputApp in 'create_plan' mode. Ensure LLM API keys and dependencies are configured.")
-    # Default test is for "create_plan" mode
+    print("Testing FeatureInputApp in 'create_plan' mode.")
+    print("Ensure LLM API keys and dependencies are configured, and feature_input_app.tcss exists.")
+    
     app_create = FeatureInputApp(mode="create_plan")
     app_result_create = app_create.run()
 
     if app_result_create:
-        # In 'create_plan' mode, result is a tuple (plan_content, feature_description)
         if isinstance(app_result_create, tuple) and len(app_result_create) == 2:
             plan_content, feature_description = app_result_create
 
@@ -601,9 +567,7 @@ if __name__ == "__main__":
             plan_title = _extract_plan_title_for_test(plan_content)
             sanitized_title = _sanitize_for_path_for_test(plan_title)
             
-            plan_dir_name = TM4AIDER_DIR_NAME_TEST
-            plans_subdir = PLANS_SUBDIR_NAME_TEST
-            save_dir_path = os.path.join(plan_dir_name, plans_subdir, sanitized_title)
+            save_dir_path = os.path.join(_TM4AIDER_DIR_NAME_TEST, _PLANS_SUBDIR_NAME_TEST, sanitized_title)
             
             try:
                 os.makedirs(save_dir_path, exist_ok=True)
@@ -624,13 +588,12 @@ if __name__ == "__main__":
     else:
         print("\n'create_plan' mode: Input/Plan generation cancelled or discarded.")
 
-    # Example of how to test "edit_section" mode (can be run separately or conditionally)
+    # To test "edit_section" mode:
     # print("\nTesting FeatureInputApp in 'edit_section' mode (dummy test)...")
     # dummy_initial_text = "## Section to Edit\n\nThis is some initial content."
     # app_edit = FeatureInputApp(mode="edit_section", initial_text=dummy_initial_text, window_title="Test Edit Mode")
     # app_result_edit = app_edit.run()
     # if app_result_edit is not None:
-    #     # In 'edit_section' mode, result is a string (edited_text)
     #     print("\n--- Edited Text (from app exit - edit_section mode) ---")
     #     print(app_result_edit)
     # else:

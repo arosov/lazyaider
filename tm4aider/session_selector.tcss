@@ -1,0 +1,61 @@
+RenameSessionScreen {
+    align: center middle;
+}
+
+#rename_dialog {
+    width: 60;
+    height: auto;
+    border: thick $primary;
+    background: $surface;
+    padding: 1 2;
+}
+
+#rename_dialog Input {
+    margin-bottom: 1;
+}
+#rename_dialog .button_row {
+    width: 100%;
+    layout: horizontal;
+    align-horizontal: center;
+    margin-top: 1;
+}
+
+#rename_dialog Button {
+    width: auto;
+    margin: 0 1;
+}
+
+/* Styles for SessionSelectorApp */
+SessionSelectorApp Screen {
+    align: center middle;
+}
+#dialog { /* This ID is used in SessionSelectorApp */
+    width: 60;
+    height: auto;
+    max-height: 80%;
+    border: thick $primary;
+    background: $surface;
+    padding: 1 2;
+}
+#session_list_view {
+    height: auto;
+    max-height: 10;
+    margin-bottom: 1;
+    border: round $primary-lighten-2;
+}
+#dialog Input {
+    margin-bottom: 1;
+}
+#dialog Label {
+    margin-bottom: 1;
+}
+#dialog .button_row {
+    width: 100%;
+    layout: horizontal; 
+    align-horizontal: center; 
+    margin-top: 1;
+}
+#dialog Button {
+    width: auto; 
+    margin: 0 1; 
+}
