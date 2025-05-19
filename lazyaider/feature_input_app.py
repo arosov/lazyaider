@@ -124,11 +124,11 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
         """Apply theme, configure UI based on mode, and focus the input widget."""
         # Set Title
         if self.custom_window_title:
-            self.TITLE = self.custom_window_title
+            self.title = self.custom_window_title
         elif self.mode == "edit_section":
-            self.TITLE = "LazyAider - Edit Section"
+            self.title = "LazyAider - Edit Section"
         else: # create_plan
-            self.TITLE = "LazyAider - AI Powered Plan Generation"
+            self.title = "LazyAider - AI Powered Plan Generation"
 
 
         # Apply theme from config
