@@ -31,20 +31,23 @@ LazyAider is a terminal-based tool designed to streamline your development workf
 
 ## Screenshots
 
-<!-- Placeholder for Session Selector screenshot -->
-**Session Selector:**
-<!-- ![LazyAider Session Selector](path/to/session_selector_screenshot.png) -->
-*Caption: The session selector allows you to pick an existing session or create/rename sessions.*
+### Session Selector:
 
-<!-- Placeholder for Main UI/Sidebar screenshot -->
-**Main Sidebar UI:**
-<!-- ![LazyAider Sidebar UI](path/to/sidebar_ui_screenshot.png) -->
-*Caption: The LazyAider sidebar showing an active plan within a tmux session.*
+![LazyAider Session Selector](img/session_selector.png)
 
-<!-- Placeholder for Plan Generation input screenshot -->
-**Plan Generation:**
-<!-- ![LazyAider Plan Generation](path/to/plan_generation_screenshot.png) -->
-*Caption: Inputting a feature description to generate a development plan.*
+*The session selector allows you to pick an existing session or create/rename sessions.*
+
+### Main Sidebar UI:
+
+![LazyAider Sidebar UI](img/sidebar.png)
+
+*The LazyAider sidebar showing an active plan within a tmux session.*
+
+### Plan Generation:
+
+![LazyAider Plan Generation](img/plan_gen.png)
+
+*Inputting a feature description to generate a development plan.*
 
 ## Installation
 
