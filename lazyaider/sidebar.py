@@ -431,7 +431,7 @@ class Sidebar(App):
                         # If a line is truly just whitespace, `line.strip()` would be empty.
                         # The original code sent `f" {line}"` which adds a leading space.
                         tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "M-Enter") # Alt+Enter for newline in prompt
-                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f"{line.strip()}") # Send the line as is
+                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f" {line.strip()}") # Send the line with a leading space
                         self.log(f"Sent to Aider (prompt line {i+2}): {line[:50]}...")
 
 
