@@ -35,7 +35,7 @@ dependencies = [
 ]
 
 [project.scripts]
-lazyaider = "lazyaider:main_cli"
+lazyaider = "lazyaider_main:main_cli"
 
 [project.urls]
 "Homepage" = "https://github.com/arosov/lazyaider"  # TODO: Update with your project's URL
@@ -44,7 +44,7 @@ lazyaider = "lazyaider:main_cli"
 
 [tool.setuptools]
 # Explicitly declare top-level modules and packages
-# 'lazyaider' in py-modules refers to lazyaider.py at the root
-py-modules = ["lazyaider"]
+# 'lazyaider_main' in py-modules refers to lazyaider_main.py at the root
+py-modules = ["lazyaider_main"]
 # 'lazyaider' in packages refers to the lazyaider/ directory
 packages = ["lazyaider"]
