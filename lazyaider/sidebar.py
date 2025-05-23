@@ -7,6 +7,7 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal, VerticalScroll, Vertical, Grid
 from textual.widgets import Button, Footer, Header, Static, Collapsible, Select, Label, Switch
 from lazyaider import tmux_utils
+from lazyaider.venv_utils import get_venv_activation_prefix # Import the new utility
 
 class Sidebar(App):
     """Task Manager for Aider coding assistant"""
@@ -280,34 +281,21 @@ class Sidebar(App):
                 return
 
             plan_generator_window_name = "lazyaider-plan-gen"
-            log_dir = Path(".lazyaider") / "logs"
-            log_file_path = log_dir / "plan_generator.log"
-            # Ensure log directory exists, then run the command, redirecting output to log file
+            # log_dir and log_file_path are not used here anymore since redirection was removed
+            # log_dir = Path(".lazyaider") / "logs"
+            # log_file_path = log_dir / "plan_generator.log"
             python_executable = sys.executable
             plan_generator_module = "lazyaider.plan_generator"
 
-            # Determine if running in a virtual environment
-            is_venv = sys.prefix != sys.base_prefix
-            activate_command_part = ""
-
-            if is_venv:
-                # sys.prefix should point to the venv directory
-                venv_path = Path(sys.prefix)
-                activate_script_path = venv_path / "bin" / "activate"
-                if activate_script_path.exists():
-                    # Use '.' (source) for POSIX compatibility. Quote path for safety.
-                    activate_command_part = f". \"{activate_script_path.resolve()}\" && "
-                    self.log(f"Virtual environment detected. Will use activate script: {activate_script_path}")
-                else:
-                    self.log.warning(f"Virtual environment detected, but activate script not found at {activate_script_path}. Proceeding without explicit activation.")
+            activate_command_part = get_venv_activation_prefix()
+            if activate_command_part:
+                # Log the part before '&&' to show the source command
+                self.log(f"Virtual environment activation prefix generated: {activate_command_part.split('&&')[0].strip()}")
             else:
-                self.log.info("Not running in a virtual environment, or sys.prefix/sys.base_prefix are the same.")
+                self.log.info("No virtual environment activation prefix generated.")
 
             # Construct the actual command to generate the plan
-            # Removed redirection to log_file_path as it likely interferes with the TUI app
             actual_plan_command = f"\"{python_executable}\" -m {plan_generator_module}"
-            
-            # Prepend activation command if applicable
             command_to_run = f"{activate_command_part}{actual_plan_command}"
             
             self.log(f"Constructed command for plan generator: {command_to_run}")
