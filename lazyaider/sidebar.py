@@ -292,7 +292,7 @@ class Sidebar(App):
             # Construct the actual command to generate the plan
             actual_plan_command = f"\"{python_executable}\" -m {plan_generator_module}"
             command_to_run = f"{activate_command_part}{actual_plan_command}"
-            
+
             self.log(f"Constructed command for plan generator: {command_to_run}")
 
             target_window_specifier = f"{self.TMUX_SESSION_NAME}:{plan_generator_window_name}"
@@ -406,69 +406,24 @@ class Sidebar(App):
                 # Determine the Aider command prefix
                 aider_command_prefix = f"/{action_type} " # e.g., "/ask ", "/code ", "/architect "
 
-                # Send the section content prefixed with the command
-                # Ensure the content is sent as a single block, handling newlines appropriately.
-                # tmux send-keys will interpret newlines in the string as separate "Enter" presses
-                # if not handled. However, for Aider, we usually want to paste the whole block.
-                # Aider's /ask, /code, etc. usually take the rest of the line as input.
-                # If the section_content has newlines, it might be better to send it in a way
-                # that Aider can consume it, e.g. by replacing newlines with spaces for a single-line prompt,
-                # or by ensuring Aider is in a state to accept multi-line input if that's how it works.
-                # For now, let's assume Aider's /ask, /code, /architect commands can handle the content as is,
-                # and newlines within the content will be part of the prompt.
-                # Aider typically expects the prompt on a single line after the command.
-                # Let's replace newlines with spaces to make it a single line prompt.
-                # This might lose formatting, but is safer for Aider's command parsing.
-                # Alternatively, one could send the command, then paste the content, then send Enter.
-                # For simplicity, let's try sending it as one line first.
-
-                # To send multi-line content to Aider, it's often better to use /edit or rely on
-                # Aider's ability to read from a temp file or clipboard.
-                # Sending raw newlines via send-keys can be problematic.
-                # Let's send the command and then the content separately, allowing tmux to handle it.
-                # This is still tricky. Aider's /ask, /code, /architect are single-line.
-                # The best approach for multi-line content with these commands is often to instruct the user
-                # to paste it, or to use a different Aider feature.
-                # Given the request, we will send the command and then the content.
-                # This implies the content should be on the same "line" as the command for Aider.
-                # So, we should probably make section_content a single line.
-
-                # Let's reconsider: Aider's /ask, /code, /architect commands take the rest of the line as the prompt.
-                # If section_content has newlines, it will break.
-                # The most straightforward way is to make section_content a single line.
-                # However, the user asked to "send the rest of the markdown content of the section".
-                # This implies preserving it.
-                # A common pattern for sending multi-line text to a CLI via tmux is to use a heredoc or paste.
-                # Aider doesn't directly support heredocs for these commands.
-                #
-                # Let's assume for now that the user wants the raw section content sent, and will deal with
-                # Aider's interpretation. We will send the command, then the content, then Enter.
-                # This means the content will appear on a new line after the command in the terminal.
-                # This is NOT how /ask, /code, /architect work. They expect the prompt on the same line.
-                #
-                # The request: "Then send the rest of the markdown content of the section using /ask /code or /architect as a prefix according to the button."
-                # This strongly implies: `/ask <content_here>`
-                # So, the content MUST be on one line or escaped.
-                # Let's replace newlines with a space for the prompt.
-                # The full prompt content is now directly from the prompt_chunk.
                 full_prompt_content = prompt_chunk.strip()
 
                 try:
                     if not full_prompt_content: # Check if content is empty
                         self.log.warning(f"Prompt content for section {section_index} is empty. Sending command prefix '{aider_command_prefix.strip()}' only.")
-                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, aider_command_prefix.strip())
-                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter")
                         return
 
                     prompt_lines = full_prompt_content.split('\n')
 
                     # Send the command prefix and the first line of the combined prompt
-                    first_prompt_line = prompt_lines[0]
+                    first_prompt_line = prompt_lines[0].strip()
                     tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f"{aider_command_prefix}{first_prompt_line}")
                     self.log(f"Sent to Aider (first prompt line): {aider_command_prefix.strip()} {first_prompt_line[:50]}...")
 
                     # Send subsequent prompt lines with M-Enter
                     for i, line in enumerate(prompt_lines[1:]):
+                        if not line.strip():
+                            continue
                         # Send M-Enter only if the line is not empty.
                         # If the line is empty, sending M-Enter then a space might be undesirable.
                         # Aider might interpret an empty line in a multi-line prompt as significant.
@@ -476,7 +431,7 @@ class Sidebar(App):
                         # If a line is truly just whitespace, `line.strip()` would be empty.
                         # The original code sent `f" {line}"` which adds a leading space.
                         tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "M-Enter") # Alt+Enter for newline in prompt
-                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f"{line}") # Send the line as is
+                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f"{line.strip()}") # Send the line as is
                         self.log(f"Sent to Aider (prompt line {i+2}): {line[:50]}...")
 
 
@@ -518,10 +473,10 @@ class Sidebar(App):
                         self.log(f"Using venv activation for section editor: {activate_command_part.split('&&')[0].strip()}")
                     # else: # Optionally log if no venv detected for editor launch
                         # self.log.info("No venv activation for section editor.")
-                    
+
                     actual_editor_command = f"\"{python_executable}\" -m {section_editor_module_path} --file-path \"{active_markdown_file_path.resolve()}\" --section-index {section_index}"
                     command_to_run = f"{activate_command_part}{actual_editor_command}"
-                    
+
                     self.log(f"Constructed command for section editor: {command_to_run}")
 
                     target_window_specifier = f"{self.TMUX_SESSION_NAME}:{editor_window_name}"
