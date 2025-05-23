@@ -67,54 +67,49 @@ class Sidebar(App):
                 if item.is_dir():
                     plan_options.append((item.name, item.name)) # Use a tuple (text, value)
 
-        # Check if there are any actual plans beyond the refresh option
-        if len(plan_options) > 1: # More than just the refresh option
-            load_plan_select.set_options(plan_options)
-            load_plan_select.disabled = False
+        load_plan_select.set_options(plan_options)
+        load_plan_select.disabled = False # Always enabled as refresh option is present
+
+        if len(plan_options) > 1: # Actual plans exist (more than just the refresh option)
             load_plan_select.prompt = "Select a plan..."
-            load_plan_select.refresh() # Explicitly refresh the widget
-            self.log(f"Refreshed plan list. Found {len(plan_options)} options in {plans_base_path}.")
+            # Log count of actual plans, excluding the refresh option itself
+            self.log(f"Refreshed plan list. Found {len(plan_options) - 1} actual plans in {plans_base_path}.")
+        else: # Only the refresh option exists
+            load_plan_select.prompt = "No plans found (Refresh list)"
+            self.log(f"No actual plan directories found in {plans_base_path}. 'Load plan' select shows only refresh option.")
 
-            available_plan_values = [val for _, val in plan_options]
-            restored_selection = False
+        load_plan_select.refresh() # Explicitly refresh the widget
 
-            # Try to restore previously selected value if still valid
-            if previous_selected_value and previous_selected_value in available_plan_values:
-                load_plan_select.value = previous_selected_value
-                self.log(f"Restored previously selected plan '{previous_selected_value}'.")
+        available_plan_values = [val for _, val in plan_options]
+        restored_selection = False
+
+        # Try to restore previously selected value if still valid
+        if previous_selected_value and previous_selected_value in available_plan_values:
+            load_plan_select.value = previous_selected_value
+            self.log(f"Restored previously selected plan '{previous_selected_value}'.")
+            restored_selection = True
+        # If not restored from previous, try config (only if TMUX_SESSION_NAME is set)
+        elif self.TMUX_SESSION_NAME:
+            from lazyaider import config as app_config_module # Ensure import
+            active_plan_name_from_config = app_config_module.settings.get(app_config_module.KEY_MANAGED_SESSIONS, {})\
+                .get(self.TMUX_SESSION_NAME, {})\
+                .get(app_config_module.KEY_SESSION_ACTIVE_PLAN_NAME)
+
+            if active_plan_name_from_config and active_plan_name_from_config in available_plan_values:
+                load_plan_select.value = active_plan_name_from_config
+                self.log(f"Pre-selected plan '{active_plan_name_from_config}' for session '{self.TMUX_SESSION_NAME}' from config.")
                 restored_selection = True
-            # If not restored from previous, try config (only if TMUX_SESSION_NAME is set)
-            elif self.TMUX_SESSION_NAME:
-                from lazyaider import config as app_config_module # Ensure import
-                active_plan_name_from_config = app_config_module.settings.get(app_config_module.KEY_MANAGED_SESSIONS, {})\
-                    .get(self.TMUX_SESSION_NAME, {})\
-                    .get(app_config_module.KEY_SESSION_ACTIVE_PLAN_NAME)
+            elif active_plan_name_from_config: # Configured plan not found
+                self.log.warning(f"Plan '{active_plan_name_from_config}' from config for session '{self.TMUX_SESSION_NAME}' not found in available plans. Ignoring.")
 
-                if active_plan_name_from_config and active_plan_name_from_config in available_plan_values:
-                    load_plan_select.value = active_plan_name_from_config
-                    self.log(f"Pre-selected plan '{active_plan_name_from_config}' for session '{self.TMUX_SESSION_NAME}' from config.")
-                    restored_selection = True
-                elif active_plan_name_from_config: # Configured plan not found
-                    self.log.warning(f"Plan '{active_plan_name_from_config}' from config for session '{self.TMUX_SESSION_NAME}' not found in available plans. Ignoring.")
-
-            if not restored_selection and load_plan_select.value is not Select.BLANK and previous_selected_value not in available_plan_values:
-                # If a previous selection existed but is no longer valid, and no other selection was made,
-                # explicitly set to BLANK to trigger on_select_changed for clearing.
-                load_plan_select.value = Select.BLANK
-
-
-        else: # No plan_options
-            current_value_before_clear = load_plan_select.value
-            load_plan_select.set_options([])
-            load_plan_select.disabled = True
-            load_plan_select.prompt = "No plans available"
-            load_plan_select.refresh() # Explicitly refresh the widget
-            self.log(f"No plan directories found in {plans_base_path}. 'Load plan' select disabled.")
-
-            if current_value_before_clear is not Select.BLANK:
-                # If a plan was selected, and now there are no plans, its value will become BLANK.
-                # Setting .value to BLANK explicitly ensures on_select_changed is triggered.
-                load_plan_select.value = Select.BLANK
+        if not restored_selection and load_plan_select.value is not Select.BLANK and \
+           (previous_selected_value is not None and previous_selected_value not in available_plan_values):
+            # If a previous selection existed (and it wasn't the refresh action itself being re-evaluated as 'previous')
+            # and is no longer valid, and no other selection was made (either restored or from config),
+            # explicitly set to BLANK to trigger on_select_changed for clearing.
+            # This handles the case where a plan was deleted.
+            self.log(f"Previously selected value '{previous_selected_value}' is no longer valid and no other selection restored. Setting Select to BLANK.")
+            load_plan_select.value = Select.BLANK
 
     def watch_theme(self, old_theme: str | None, new_theme: str | None) -> None:
         """Saves the theme when it changes."""
