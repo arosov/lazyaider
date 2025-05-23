@@ -304,7 +304,8 @@ class Sidebar(App):
                 self.log.info("Not running in a virtual environment, or sys.prefix/sys.base_prefix are the same.")
 
             # Construct the actual command to generate the plan
-            actual_plan_command = f"mkdir -p \"{log_dir.resolve()}\" && \"{python_executable}\" -m {plan_generator_module} > \"{log_file_path.resolve()}\" 2>&1"
+            # Removed redirection to log_file_path as it likely interferes with the TUI app
+            actual_plan_command = f"\"{python_executable}\" -m {plan_generator_module}"
             
             # Prepend activation command if applicable
             command_to_run = f"{activate_command_part}{actual_plan_command}"
