@@ -22,6 +22,7 @@ LazyAider is a terminal-based tool designed to streamline your development workf
     *   View and navigate through the sections of your active development plan.
     *   Send plan sections or custom instructions to your shell.
     *   Mark sections as complete.
+    *   The "Start Aider" button will first look for an `aider.sh` script in the current working directory and execute it if present. If not found, it will run the `aider` command.
 *   **Plan & Section Editing**:
     *   Edit feature descriptions or individual plan sections using a built-in interface or an external text editor.
 *   **Configuration**:
