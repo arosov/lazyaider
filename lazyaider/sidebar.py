@@ -526,11 +526,20 @@ class Sidebar(App):
 
                     editor_window_name = f"lazyaider-edit-s{section_index}-{self.current_selected_plan_name[:10]}"
 
-                    # Use sys.executable for robustness, and -m to run module if section_editor is part of package
-                    # Assuming lazyaider.section_editor can be run as a module.
-                    # If section_editor.py is just a script, use "python lazyaider/section_editor.py"
-                    # For now, stick to the pattern used for plan_generator.py
-                    command_to_run = f"python lazyaider/section_editor.py --file-path \"{active_markdown_file_path.resolve()}\" --section-index {section_index}"
+                    # Use sys.executable for robustness
+                    python_executable = sys.executable
+                    section_editor_module_path = "lazyaider.section_editor" # Assuming it can be run with -m
+
+                    activate_command_part = get_venv_activation_prefix()
+                    if activate_command_part:
+                        self.log(f"Using venv activation for section editor: {activate_command_part.split('&&')[0].strip()}")
+                    # else: # Optionally log if no venv detected for editor launch
+                        # self.log.info("No venv activation for section editor.")
+                    
+                    actual_editor_command = f"\"{python_executable}\" -m {section_editor_module_path} --file-path \"{active_markdown_file_path.resolve()}\" --section-index {section_index}"
+                    command_to_run = f"{activate_command_part}{actual_editor_command}"
+                    
+                    self.log(f"Constructed command for section editor: {command_to_run}")
 
                     target_window_specifier = f"{self.TMUX_SESSION_NAME}:{editor_window_name}"
                     target_pane_for_keys = f"{target_window_specifier}.0"
