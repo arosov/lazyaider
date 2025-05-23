@@ -279,7 +279,7 @@ class Sidebar(App):
                 return
 
             plan_generator_window_name = "lazyaider-plan-gen"
-            command_to_run = "python plan_generator.py" # Use top-level script
+            command_to_run = "python -m lazyaider.plan_generator" # Execute as module
             target_window_specifier = f"{self.TMUX_SESSION_NAME}:{plan_generator_window_name}"
             # Pane 0 is the default initial pane in a new window
             target_pane_for_keys = f"{target_window_specifier}.0"
