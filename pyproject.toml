@@ -36,6 +36,7 @@ dependencies = [
 
 [project.scripts]
 lazyaider = "lazyaider_main:main_cli"
+lazyaider-plan-generator = "lazyaider.plan_generator:main"
 
 [project.urls]
 "Homepage" = "https://github.com/arosov/lazyaider"  # TODO: Update with your project's URL

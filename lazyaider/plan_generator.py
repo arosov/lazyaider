@@ -2,8 +2,8 @@ import sys
 import os
 import re
 import argparse # Added for CLI argument parsing
-from lazyaider.feature_input_app import FeatureInputApp
-from lazyaider.llm_planner import generate_plan # Added for non-interactive mode
+from .feature_input_app import FeatureInputApp # Changed to relative import
+from .llm_planner import generate_plan # Changed to relative import
 
 # Define global constants for directory names
 lazyaider_DIR_NAME = ".lazyaider"
@@ -71,7 +71,7 @@ def _process_and_save_plan(plan_content: str, feature_description: str, session_
         print(f"\nError saving files to {plan_dir}: {e}", file=sys.stderr)
         # No sys.exit here, let the caller decide
 
-if __name__ == "__main__":
+def main(): # Wrap existing __main__ block in a main() function
     parser = argparse.ArgumentParser(description="Generate a development plan.")
     parser.add_argument(
         "--plan-file",
@@ -149,3 +149,6 @@ if __name__ == "__main__":
             # If app_exit_result is None, it means the user cancelled or discarded the plan.
             print("Plan generation cancelled or discarded by the user. Exiting.", file=sys.stderr)
             sys.exit(0) # Exit even if plan generation was cancelled
+
+if __name__ == "__main__":
+    main()

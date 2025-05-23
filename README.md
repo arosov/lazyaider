@@ -108,18 +108,18 @@ Alternatively, you can still run it directly using `python lazyaider.py` from th
 
 Internal command-line arguments used for tmux integration (e.g., `--run-in-tmux-pane`, `--target-pane`, `--session-name` when launching the app pane itself) are not intended for direct user interaction when calling `lazyaider` as an installed script.
 
-### Plan Generation (`plan_generator.py`)
+### Plan Generation
 
-To generate a development plan from a feature description:
+To generate a development plan from a feature description, use the `lazyaider-plan-generator` command:
 
 ```bash
-python plan_generator.py
+lazyaider-plan-generator
 ```
 When run without arguments, this script will launch an interactive Textual application to input the feature description.
 
 Alternatively, you can use it non-interactively:
 
-**Command-Line Options for `plan_generator.py`:**
+**Command-Line Options for `lazyaider-plan-generator`:**
 
 *   `--plan-file <PATH_TO_DESCRIPTION_FILE>`
     *   Path to a text file containing the feature description for non-interactive plan generation.
@@ -127,7 +127,7 @@ Alternatively, you can use it non-interactively:
 
     Example:
     ```bash
-    python plan_generator.py --plan-file ./feature_ideas/new_auth_system.txt
+    lazyaider-plan-generator --plan-file ./feature_ideas/new_auth_system.txt
     ```
 
 *   `--dump-prompt <PATH_TO_SAVE_PROMPT>`
@@ -137,7 +137,7 @@ Alternatively, you can use it non-interactively:
 
     Example:
     ```bash
-    python plan_generator.py --plan-file feature.txt --dump-prompt prompt_output.txt
+    lazyaider-plan-generator --plan-file feature.txt --dump-prompt prompt_output.txt
     ```
 
 *   `--use-repomix`
@@ -147,7 +147,7 @@ Alternatively, you can use it non-interactively:
 
     Example:
     ```bash
-    python plan_generator.py --plan-file feature.txt --use-repomix
+    lazyaider-plan-generator --plan-file feature.txt --use-repomix
     ```
 
 Generated plans are saved in the `.lazyaider/plans/` directory, organized by a sanitized version of the plan's title.
