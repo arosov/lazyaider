@@ -1,6 +1,7 @@
 import subprocess # Still needed for CalledProcessError
 import re # For parsing markdown sections
 import shutil # For file copying
+import sys # To get the current python interpreter path
 from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, VerticalScroll, Vertical, Grid
@@ -282,7 +283,10 @@ class Sidebar(App):
             log_dir = Path(".lazyaider") / "logs"
             log_file_path = log_dir / "plan_generator.log"
             # Ensure log directory exists, then run the command, redirecting output to log file
-            command_to_run = f"mkdir -p {log_dir.resolve()} && python -m lazyaider.plan_generator > {log_file_path.resolve()} 2>&1"
+            # Use sys.executable to ensure the correct Python interpreter from the venv is used
+            python_executable = sys.executable
+            plan_generator_module = "lazyaider.plan_generator"
+            command_to_run = f"mkdir -p {log_dir.resolve()} && {python_executable} -m {plan_generator_module} > {log_file_path.resolve()} 2>&1"
             target_window_specifier = f"{self.TMUX_SESSION_NAME}:{plan_generator_window_name}"
             # Pane 0 is the default initial pane in a new window
             target_pane_for_keys = f"{target_window_specifier}.0"
