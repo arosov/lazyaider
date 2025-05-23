@@ -34,7 +34,7 @@ def get_unique_session_name(base_name: str) -> str:
     return base_name
 
 
-if __name__ == "__main__":
+def main_cli():
     parser = argparse.ArgumentParser(description="Run LazyAider")
     parser.add_argument(
         "--run-in-tmux-pane",
@@ -183,3 +183,6 @@ if __name__ == "__main__":
         )
 
         manage_tmux_session(SESSION_NAME, app_command, shell_pane_target, app_pane_target)
+
+if __name__ == "__main__":
+    main_cli()

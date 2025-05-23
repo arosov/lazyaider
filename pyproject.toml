@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lazyaider"
+version = "0.1.0" # You can update this as your project evolves
+authors = [
+  { name="Alexis Rosovsky", email="arosov@github.io" }, # TODO: Update with your details
+]
+description = "LazyAider is a terminal-based tool designed to streamline your development workflow by integrating with tmux and leveraging Large Language Models (LLMs) to help you plan and execute coding tasks."
+readme = "README.md"
+requires-python = ">=3.8" # Assuming Python 3.8+ from textual/litellm typical usage
+license = "MIT" # Use SPDX identifier
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    # "License :: OSI Approved :: MIT License", # Removed deprecated classifier
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: Software Development :: User Interfaces",
+    "Topic :: Terminals :: Terminal Emulators/X Terminals", # For tmux interaction
+    "Topic :: Utilities",
+]
+dependencies = [
+    "litellm",
+    "textual",
+    "PyYAML"
+]
+
+[project.scripts]
+lazyaider = "lazyaider:main_cli"
+
+[project.urls]
+"Homepage" = "https://github.com/arosov/lazyaider"  # TODO: Update with your project's URL
+"Bug Tracker" = "https://github.com/arosov/lazyaider/issues" # TODO: Update
+"Repository" = "https://github.com/arosov/lazyaider" # TODO: Update
+
+[tool.setuptools]
+# Explicitly declare top-level modules and packages
+# 'lazyaider' in py-modules refers to lazyaider.py at the root
+py-modules = ["lazyaider"]
+# 'lazyaider' in packages refers to the lazyaider/ directory
+packages = ["lazyaider"]

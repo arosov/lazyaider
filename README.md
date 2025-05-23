@@ -56,14 +56,21 @@ LazyAider is a terminal-based tool designed to streamline your development workf
     git clone https://github.com/yourusername/lazyaider.git # Replace with your actual repo URL
     cd lazyaider
     ```
-2.  **Install dependencies:**
-    It's recommended to use a virtual environment.
+2.  **Create a virtual environment (recommended):**
     ```bash
     python -m venv venv
     source venv/bin/activate  # On Windows use `venv\Scripts\activate`
-    pip install -r requirements.txt
     ```
-3.  **Configuration:**
+3.  **Install LazyAider:**
+    *   For users:
+        ```bash
+        pip install .
+        ```
+    *   For developers (editable install):
+        ```bash
+        pip install -e .
+        ```
+4.  **Configuration:**
     *   LazyAider looks for a configuration file named `.lazyaider.conf.yml` in the root of the project. You may need to create this file or configure settings like your LLM API key.
     *   Key settings you might want to configure:
         *   `llm_model`: The LLM model to use (e.g., "gpt-4-turbo").
@@ -74,11 +81,12 @@ LazyAider is a terminal-based tool designed to streamline your development workf
 
 ### Main Application (`lazyaider.py`)
 
-To start LazyAider and manage your development sessions:
+To start LazyAider and manage your development sessions, run the installed command:
 
 ```bash
-python lazyaider.py
+lazyaider
 ```
+Alternatively, you can still run it directly using `python lazyaider.py` from the project directory.
 
 *   If you have existing managed sessions, the **Session Selector** will appear, allowing you to choose a session, create a new one, or rename an existing one.
 *   If no managed sessions are found, LazyAider will propose creating a new default session (e.g., `lazyaider-session`).
@@ -95,10 +103,10 @@ python lazyaider.py
 
     Example:
     ```bash
-    python lazyaider.py --load-session my-project-session
+    lazyaider --load-session my-project-session
     ```
 
-Internal command-line arguments used for tmux integration (e.g., `--run-in-tmux-pane`, `--target-pane`, `--session-name` when launching the app pane itself) are not intended for direct user interaction.
+Internal command-line arguments used for tmux integration (e.g., `--run-in-tmux-pane`, `--target-pane`, `--session-name` when launching the app pane itself) are not intended for direct user interaction when calling `lazyaider` as an installed script.
 
 ### Plan Generation (`plan_generator.py`)
 
