@@ -460,29 +460,25 @@ class Sidebar(App):
                         tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter")
                         return
 
-                    prompt_lines = full_prompt_content.split('\n')
-
-                    # Send the command prefix and the first line of the combined prompt
-                    first_prompt_line = prompt_lines[0]
-                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f"{aider_command_prefix}{first_prompt_line}")
-                    self.log(f"Sent to Aider (first prompt line): {aider_command_prefix.strip()} {first_prompt_line[:50]}...")
-
-                    # Send subsequent prompt lines with M-Enter
-                    for i, line in enumerate(prompt_lines[1:]):
-                        # Send M-Enter only if the line is not empty.
-                        # If the line is empty, sending M-Enter then a space might be undesirable.
-                        # Aider might interpret an empty line in a multi-line prompt as significant.
-                        # For now, send M-Enter then the line (even if empty, but stripped of leading/trailing space by `split`).
-                        # If a line is truly just whitespace, `line.strip()` would be empty.
-                        # The original code sent `f" {line}"` which adds a leading space.
-                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "M-Enter") # Alt+Enter for newline in prompt
-                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f"{line}") # Send the line as is
-                        self.log(f"Sent to Aider (prompt line {i+2}): {line[:50]}...")
-
-
-                    # Finally, send Enter to submit the whole command
+                    # Send the command prefix (e.g., /code)
+                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, aider_command_prefix.strip())
+                    self.log(f"Sent to Aider command: {aider_command_prefix.strip()}")
+                    # Send Enter to activate Aider's prompt mode for this command
                     tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter")
-                    self.log(f"Submitted multi-line command to Aider for section {section_index} ({action_type}) using prompt content.")
+                    self.log("Sent Enter to Aider to await prompt.")
+
+                    prompt_lines = full_prompt_content.split('\n')
+                    for i, line in enumerate(prompt_lines):
+                        # Send the current line of the prompt
+                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, line)
+                        self.log(f"Sent to Aider (prompt line {i+1}): {line[:50]}...")
+                        if i < len(prompt_lines) - 1:  # If it's not the last line of the prompt
+                            tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "M-Enter")  # Send Alt+Enter for newline
+                            self.log("Sent M-Enter to Aider for newline in prompt.")
+
+                    # Finally, send Enter to submit the whole prompt
+                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter")
+                    self.log(f"Submitted multi-line prompt to Aider for section {section_index} ({action_type}).")
 
                 except Exception as e:
                     self.log.error(f"Error sending multi-line prompt to tmux: {e}")
