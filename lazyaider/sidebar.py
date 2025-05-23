@@ -283,10 +283,34 @@ class Sidebar(App):
             log_dir = Path(".lazyaider") / "logs"
             log_file_path = log_dir / "plan_generator.log"
             # Ensure log directory exists, then run the command, redirecting output to log file
-            # Use sys.executable to ensure the correct Python interpreter from the venv is used
             python_executable = sys.executable
             plan_generator_module = "lazyaider.plan_generator"
-            command_to_run = f"mkdir -p {log_dir.resolve()} && {python_executable} -m {plan_generator_module} > {log_file_path.resolve()} 2>&1"
+
+            # Determine if running in a virtual environment
+            is_venv = sys.prefix != sys.base_prefix
+            activate_command_part = ""
+
+            if is_venv:
+                # sys.prefix should point to the venv directory
+                venv_path = Path(sys.prefix)
+                activate_script_path = venv_path / "bin" / "activate"
+                if activate_script_path.exists():
+                    # Use '.' (source) for POSIX compatibility. Quote path for safety.
+                    activate_command_part = f". \"{activate_script_path.resolve()}\" && "
+                    self.log(f"Virtual environment detected. Will use activate script: {activate_script_path}")
+                else:
+                    self.log.warning(f"Virtual environment detected, but activate script not found at {activate_script_path}. Proceeding without explicit activation.")
+            else:
+                self.log.info("Not running in a virtual environment, or sys.prefix/sys.base_prefix are the same.")
+
+            # Construct the actual command to generate the plan
+            actual_plan_command = f"mkdir -p \"{log_dir.resolve()}\" && \"{python_executable}\" -m {plan_generator_module} > \"{log_file_path.resolve()}\" 2>&1"
+            
+            # Prepend activation command if applicable
+            command_to_run = f"{activate_command_part}{actual_plan_command}"
+            
+            self.log(f"Constructed command for plan generator: {command_to_run}")
+
             target_window_specifier = f"{self.TMUX_SESSION_NAME}:{plan_generator_window_name}"
             # Pane 0 is the default initial pane in a new window
             target_pane_for_keys = f"{target_window_specifier}.0"
