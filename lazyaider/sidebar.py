@@ -431,10 +431,15 @@ class Sidebar(App):
                         # For now, send M-Enter then the line (even if empty, but stripped of leading/trailing space by `split`).
                         # If a line is truly just whitespace, `line.strip()` would be empty.
                         # The original code sent `f" {line}"` which adds a leading space.
-                        time.sleep(0.1) # Delay before M-Enter
+                        from lazyaider import config as app_config_module # Ensure access to config
+                        m_enter_delay = app_config_module.settings.get(
+                            app_config_module.KEY_AIDER_M_ENTER_DELAY,
+                            app_config_module.DEFAULT_AIDER_M_ENTER_DELAY
+                        )
+                        time.sleep(m_enter_delay) # Delay before M-Enter
                         tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "M-Enter") # Alt+Enter for newline in prompt
                         tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f" {line.strip()}") # Send the line with a leading space
-                        self.log(f"Sent to Aider (prompt line {i+2}): {line[:50]}...")
+                        self.log(f"Sent to Aider (prompt line {i+2}): {line[:50]}... with delay {m_enter_delay}s")
 
 
                     # Finally, send Enter to submit the whole command

@@ -13,6 +13,7 @@ KEY_LLM_API_KEY = "llm_api_key"
 KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH = "plan_generation_prompt_override_path" # Can be global or per-session
 KEY_SESSION_ACTIVE_PLAN_NAME = "active_plan_name" # Stores the active plan directory name for a session
 KEY_TEXT_EDITOR = "text_editor" # Command to launch the external text editor
+KEY_AIDER_M_ENTER_DELAY = "aider_m_enter_delay" # Delay in seconds before M-Enter and subsequent line
 
 DEFAULT_SIDEPANE_PERCENT_WIDTH = 20
 DEFAULT_THEME_NAME = "light" # Textual's default theme
@@ -20,6 +21,7 @@ DEFAULT_LLM_MODEL = "gpt-3.5-turbo" # Default LLM model
 DEFAULT_LLM_API_KEY = None # Default LLM API key
 DEFAULT_PLAN_GENERATION_PROMPT_OVERRIDE_PATH = None # Default global path for prompt override file
 DEFAULT_TEXT_EDITOR = None # Default external text editor command
+DEFAULT_AIDER_M_ENTER_DELAY = 0.2 # Default delay in seconds
 
 def find_config_file() -> str | None:
     """
@@ -143,6 +145,17 @@ def load_config() -> dict:
         config[KEY_TEXT_EDITOR] = None
     elif KEY_TEXT_EDITOR not in config: # Not present at all
         config[KEY_TEXT_EDITOR] = DEFAULT_TEXT_EDITOR
+
+    # Ensure aider_m_enter_delay is a float or int
+    aider_delay_val = config.get(KEY_AIDER_M_ENTER_DELAY)
+    if not isinstance(aider_delay_val, (float, int)):
+        if KEY_AIDER_M_ENTER_DELAY in config: # Value exists but is not a number
+            print(f"Warning: '{KEY_AIDER_M_ENTER_DELAY}' in {config_path or 'config'} is not a number. Using default value.", file=sys.stderr)
+        config[KEY_AIDER_M_ENTER_DELAY] = DEFAULT_AIDER_M_ENTER_DELAY
+    elif aider_delay_val < 0: # Ensure delay is not negative
+        print(f"Warning: '{KEY_AIDER_M_ENTER_DELAY}' in {config_path or 'config'} is negative. Using default value.", file=sys.stderr)
+        config[KEY_AIDER_M_ENTER_DELAY] = DEFAULT_AIDER_M_ENTER_DELAY
+
 
     return config
 
