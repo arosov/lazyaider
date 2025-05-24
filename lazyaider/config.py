@@ -25,7 +25,7 @@ DEFAULT_LLM_API_KEY = None # Default LLM API key
 DEFAULT_PLAN_GENERATION_PROMPT_OVERRIDE_PATH = None # Default global path for prompt override file
 DEFAULT_TEXT_EDITOR = None # Default external text editor command
 DEFAULT_AIDER_M_ENTER_DELAY = 0.3 # Default delay in seconds
-DEFAULT_MULTILINE_SECTION_PASTE = True # Default to sending multi-line prompts as multi-line
+DEFAULT_MULTILINE_SECTION_PASTE = False # Default to sending multi-line prompts as single-line
 
 def find_config_file() -> str | None:
     """
