@@ -433,7 +433,6 @@ class Sidebar(App):
                         # The original code sent `f" {line}"` which adds a leading space.
                         time.sleep(0.5) # Delay before M-Enter
                         tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "M-Enter") # Alt+Enter for newline in prompt
-                        time.sleep(0.5) # Delay after M-Enter
                         tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f" {line.strip()}") # Send the line with a leading space
                         self.log(f"Sent to Aider (prompt line {i+2}): {line[:50]}...")
 
