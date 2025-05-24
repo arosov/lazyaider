@@ -14,6 +14,7 @@ KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH = "plan_generation_prompt_override_path
 KEY_SESSION_ACTIVE_PLAN_NAME = "active_plan_name" # Stores the active plan directory name for a session
 KEY_TEXT_EDITOR = "text_editor" # Command to launch the external text editor
 KEY_AIDER_M_ENTER_DELAY = "aider_m_enter_delay" # Delay in seconds before M-Enter and subsequent line
+KEY_MULTILINE_SECTION_PASTE = "multiline_section_paste" # Boolean to control multi-line prompt sending
 
 DEFAULT_SIDEPANE_PERCENT_WIDTH = 20
 DEFAULT_THEME_NAME = "light" # Textual's default theme
@@ -22,6 +23,7 @@ DEFAULT_LLM_API_KEY = None # Default LLM API key
 DEFAULT_PLAN_GENERATION_PROMPT_OVERRIDE_PATH = None # Default global path for prompt override file
 DEFAULT_TEXT_EDITOR = None # Default external text editor command
 DEFAULT_AIDER_M_ENTER_DELAY = 0.2 # Default delay in seconds
+DEFAULT_MULTILINE_SECTION_PASTE = True # Default to sending multi-line prompts as multi-line
 
 def find_config_file() -> str | None:
     """
@@ -156,6 +158,11 @@ def load_config() -> dict:
         print(f"Warning: '{KEY_AIDER_M_ENTER_DELAY}' in {config_path or 'config'} is negative. Using default value.", file=sys.stderr)
         config[KEY_AIDER_M_ENTER_DELAY] = DEFAULT_AIDER_M_ENTER_DELAY
 
+    # Ensure multiline_section_paste is a boolean
+    if not isinstance(config.get(KEY_MULTILINE_SECTION_PASTE), bool):
+        if KEY_MULTILINE_SECTION_PASTE in config: # Value exists but is not a bool
+            print(f"Warning: '{KEY_MULTILINE_SECTION_PASTE}' in {config_path or 'config'} is not a boolean. Using default value.", file=sys.stderr)
+        config[KEY_MULTILINE_SECTION_PASTE] = DEFAULT_MULTILINE_SECTION_PASTE
 
     return config
 
