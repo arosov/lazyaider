@@ -450,6 +450,15 @@ class Sidebar(App):
                     tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter")
                     self.log(f"Submitted command to Aider for section {section_index} ({action_type}). Mode: {'multi-line' if use_multiline_paste else 'single-line'}.")
 
+                    # Save the last successfully processed step
+                    if self.TMUX_SESSION_NAME and self.current_selected_plan_name:
+                        app_config_module.update_session_last_aider_step(
+                            self.TMUX_SESSION_NAME,
+                            self.current_selected_plan_name,
+                            section_index
+                        )
+                        self.log(f"Saved last Aider step for plan '{self.current_selected_plan_name}', section {section_index}.")
+
                 except Exception as e:
                     self.log.error(f"Error sending multi-line prompt to tmux: {e}")
 
@@ -516,27 +525,39 @@ class Sidebar(App):
 
             # After processing any valid plan_sec_ button action, update label colors,
             # but only if the action was not "edit".
-            if section_index != -1 and action_type != "edit": # Check if section_index was parsed AND action is not "edit"
+            if section_index != -1 and action_type != "edit":
+                # This updates colors based on the *just clicked* section.
+                # The on_select_changed will handle initial load coloring.
+                self._update_section_label_colors(last_processed_index=section_index)
+
+
+    def _update_section_label_colors(self, last_processed_index: int | None) -> None:
+        """Updates the colors of section labels based on the last processed index."""
+        try:
+            plan_sections_container_widget = self.query_one("#plan_sections_container", Grid)
+            num_sections = len(plan_sections_container_widget.children)
+
+            for i in range(num_sections):
                 try:
-                    plan_sections_container_widget = self.query_one("#plan_sections_container", Grid)
-                    num_sections = len(plan_sections_container_widget.children)
-
-                    for i in range(num_sections):
-                        # Ensure the query for label is safe, e.g., if a section was deleted and UI not fully refreshed
-                        try:
-                            label_to_style = self.query_one(f"#section_label_{i}", Label)
-                            if i < section_index:
-                                label_to_style.styles.color = "green"
-                            elif i == section_index: # The currently interacted-with section
-                                label_to_style.styles.color = "blue"
-                            else:
-                                label_to_style.styles.color = None # Reset to default/CSS
-                        except Exception: # Catch error if a specific label_to_style is not found
-                            self.log.warning(f"Could not find label #section_label_{i} for styling.")
-                    self.log(f"Updated colors for section labels based on active section {section_index}.")
-                except Exception as e:
-                    self.log.error(f"Error updating section label colors: {e}")
-
+                    label_to_style = self.query_one(f"#section_label_{i}", Label)
+                    if last_processed_index is not None:
+                        if i < last_processed_index:
+                            label_to_style.styles.color = "green" # Completed
+                        elif i == last_processed_index:
+                            label_to_style.styles.color = "blue"  # Current/Last processed
+                        else:
+                            label_to_style.styles.color = None    # Upcoming (default/CSS)
+                    else:
+                        label_to_style.styles.color = None # No progress, all default
+                except Exception:
+                    self.log.warning(f"Could not find label #section_label_{i} for styling during color update.")
+            
+            if last_processed_index is not None:
+                self.log(f"Updated section label colors based on last processed index: {last_processed_index}.")
+            else:
+                self.log("Reset section label colors as no last processed index was provided.")
+        except Exception as e:
+            self.log.error(f"Error updating section label colors: {e}")
 
     async def on_select_changed(self, event: Select.Changed) -> None:
         """Handle select change events."""
@@ -633,6 +654,20 @@ class Sidebar(App):
                         await plan_sections_container.mount(section_item_container)
 
                     self.log(f"Displayed {len(section_titles)} sections for plan '{self.current_selected_plan_name}'.")
+
+                    # After displaying sections, update colors based on saved progress
+                    if self.TMUX_SESSION_NAME and self.current_selected_plan_name:
+                        from lazyaider import config as app_config_module # Ensure import
+                        last_step = app_config_module.get_session_last_aider_step(
+                            self.TMUX_SESSION_NAME,
+                            self.current_selected_plan_name
+                        )
+                        self._update_section_label_colors(last_processed_index=last_step)
+                        if last_step is not None:
+                            self.log(f"Applied initial section colors based on saved last step: {last_step} for plan '{self.current_selected_plan_name}'.")
+                        else:
+                            self.log(f"No saved last step found for plan '{self.current_selected_plan_name}'. Default colors applied.")
+
 
                 except Exception as e:
                     self.log.error(f"Error loading or parsing plan file {active_markdown_file_path}: {e}")

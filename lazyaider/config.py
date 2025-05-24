@@ -12,6 +12,8 @@ KEY_LLM_MODEL = "llm_model"
 KEY_LLM_API_KEY = "llm_api_key"
 KEY_PLAN_GENERATION_PROMPT_OVERRIDE_PATH = "plan_generation_prompt_override_path" # Can be global or per-session
 KEY_SESSION_ACTIVE_PLAN_NAME = "active_plan_name" # Stores the active plan directory name for a session
+KEY_SESSION_PLAN_PROGRESS = "plan_progress" # Stores progress for each plan within a session
+KEY_LAST_AIDER_STEP = "last_aider_step" # Stores the index of the last step sent to Aider for a plan
 KEY_TEXT_EDITOR = "text_editor" # Command to launch the external text editor
 KEY_AIDER_M_ENTER_DELAY = "aider_m_enter_delay" # Delay in seconds before M-Enter and subsequent line
 KEY_MULTILINE_SECTION_PASTE = "multiline_section_paste" # Boolean to control multi-line prompt sending
@@ -79,6 +81,27 @@ def load_config() -> dict:
         if not isinstance(session_settings, dict):
             print(f"Warning: Settings for session '{session_name}' in '{KEY_MANAGED_SESSIONS}' is not a dictionary. Resetting to empty.", file=sys.stderr)
             config[KEY_MANAGED_SESSIONS][session_name] = {}
+            session_settings = config[KEY_MANAGED_SESSIONS][session_name] # Re-assign after reset
+
+        # Ensure plan_progress exists and is a dictionary
+        plan_progress_dict = session_settings.get(KEY_SESSION_PLAN_PROGRESS)
+        if not isinstance(plan_progress_dict, dict):
+            if KEY_SESSION_PLAN_PROGRESS in session_settings:
+                print(f"Warning: '{KEY_SESSION_PLAN_PROGRESS}' for session '{session_name}' is not a dictionary. Initializing.", file=sys.stderr)
+            session_settings[KEY_SESSION_PLAN_PROGRESS] = {}
+            plan_progress_dict = session_settings[KEY_SESSION_PLAN_PROGRESS]
+
+        # Validate entries within plan_progress
+        for plan_name, progress_data in list(plan_progress_dict.items()): # Use list for safe iteration if modifying
+            if not isinstance(progress_data, dict):
+                print(f"Warning: Progress data for plan '{plan_name}' in session '{session_name}' is not a dictionary. Removing.", file=sys.stderr)
+                del plan_progress_dict[plan_name]
+                continue
+            
+            last_step = progress_data.get(KEY_LAST_AIDER_STEP)
+            if last_step is not None and not isinstance(last_step, int):
+                print(f"Warning: '{KEY_LAST_AIDER_STEP}' for plan '{plan_name}' in session '{session_name}' is not an integer. Resetting.", file=sys.stderr)
+                progress_data[KEY_LAST_AIDER_STEP] = None # Or del progress_data[KEY_LAST_AIDER_STEP]
 
 
     if not isinstance(config.get(KEY_THEME_NAME), str):
@@ -258,3 +281,35 @@ def update_llm_api_key_in_config(api_key: str | None) -> None:
     if current_api_key != api_key:
         settings[KEY_LLM_API_KEY] = api_key
         save_config(settings)
+
+def update_session_last_aider_step(session_name: str, plan_name: str, step_index: int | None) -> None:
+    """Updates the last Aider step index for a specific plan within a session and saves."""
+    if not session_name or not plan_name:
+        print("Warning: Session name or plan name not provided for updating last Aider step.", file=sys.stderr)
+        return
+
+    managed_sessions = settings.setdefault(KEY_MANAGED_SESSIONS, {})
+    session_settings = managed_sessions.setdefault(session_name, {})
+    plan_progress_dict = session_settings.setdefault(KEY_SESSION_PLAN_PROGRESS, {})
+    plan_specific_progress = plan_progress_dict.setdefault(plan_name, {})
+
+    current_step = plan_specific_progress.get(KEY_LAST_AIDER_STEP)
+
+    if current_step != step_index:
+        if step_index is None:
+            if KEY_LAST_AIDER_STEP in plan_specific_progress:
+                del plan_specific_progress[KEY_LAST_AIDER_STEP]
+        else:
+            plan_specific_progress[KEY_LAST_AIDER_STEP] = step_index
+        save_config(settings)
+
+def get_session_last_aider_step(session_name: str, plan_name: str) -> int | None:
+    """Retrieves the last Aider step index for a specific plan within a session."""
+    if not session_name or not plan_name:
+        return None
+    
+    try:
+        step = settings[KEY_MANAGED_SESSIONS][session_name][KEY_SESSION_PLAN_PROGRESS][plan_name][KEY_LAST_AIDER_STEP]
+        return int(step) if isinstance(step, int) else None
+    except KeyError:
+        return None
