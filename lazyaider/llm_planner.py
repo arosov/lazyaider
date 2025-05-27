@@ -175,7 +175,7 @@ def generate_plan(
             model=model,
             messages=messages,
             api_key=api_key_to_use, # Pass the API key to litellm
-            timeout=120 # seconds
+            timeout=240 # seconds
         )
         # Accessing content according to litellm's current typical response structure
         if response.choices and response.choices[0].message and response.choices[0].message.content:
