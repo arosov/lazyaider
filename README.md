@@ -25,6 +25,7 @@ LazyAider is a terminal-based tool designed to streamline your development workf
     *   The "Start Aider" button will first look for an `aider.sh` script in the current working directory and execute it if present. If not found, it will run the `aider` command.
 *   **Plan & Section Editing**:
     *   Edit feature descriptions or individual plan sections using a built-in interface or an external text editor.
+    *   Review and modify the global planner prompt (`.lazyaider/planner_prompt.md`) directly within the plan generation TUI (Ctrl+J).
 *   **Configuration**:
     *   Customize LazyAider through a `.lazyaider.conf.yml` file.
     *   Settings include LLM model, API key, UI theme, preferred text editor, and more.
@@ -162,7 +163,10 @@ LazyAider uses a configuration file named `.lazyaider.conf.yml` located in the p
 *   `theme_name`: Theme for the Textual application (e.g., "light", "dark").
 *   `text_editor`: The command to launch your preferred external text editor for editing plan sections or descriptions (e.g., `nvim`, `code --wait`).
 *   `managed_sessions`: A dictionary storing information about sessions managed by LazyAider, including the active plan for each session.
-*   `plan_generation_prompt_override_path`: Optional path to a custom prompt template for plan generation.
+*   `plan_generation_prompt_override_path`: Optional path to a custom prompt template file. This can be set globally or per session.
+    *   **If set (and the file exists), this template will be used by the planner, taking precedence over the TUI-editable global prompt (`.lazyaider/planner_prompt.md`).**
+    *   The TUI prompt editor (Ctrl+J) edits `.lazyaider/planner_prompt.md`. For these TUI edits to be used by the planner, ensure `plan_generation_prompt_override_path` is *not* set (or is null/empty) in your `.lazyaider.conf.yml` for the relevant scope (global or session).
+    *   If `.lazyaider/planner_prompt.md` does not exist when initiating TUI editing, its content will be initialized from the global `plan_generation_prompt_override_path` (if set and valid), otherwise from the default built-in template.
 
 Example snippet from `.lazyaider.conf.yml`:
 ```yaml
