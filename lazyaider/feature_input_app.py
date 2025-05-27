@@ -107,9 +107,10 @@ class FeatureInputApp(App[str | tuple[str, str] | None]):
                     soft_wrap=True,
                     read_only=True,
                 )
-                with Horizontal(id="plan_buttons_container", classes="button-container"): # Visibility handled in _set_ui_state
+                with Horizontal(id="plan_buttons_container", classes="button-container"):
                     yield Button("Save Plan & Exit", variant="success", id="save_plan_button")
                     yield Button("Discard & Exit", variant="error", id="discard_plan_button")
+                    yield Static(id="plan_stats_display", classes="hidden") # For LLM stats
         yield Footer()
 
     def _set_ui_state(self, new_state: str) -> None:
@@ -120,7 +121,15 @@ class FeatureInputApp(App[str | tuple[str, str] | None]):
         is_feature_input_visible = new_state in [self.STATE_INPUT_FEATURE, self.STATE_EDIT_PLANNER_PROMPT]
         self.query_one("#feature_input_container").set_class(not is_feature_input_visible, "hidden")
         self.query_one("#loading_container").set_class(new_state != self.STATE_LOADING_PLAN, "hidden")
-        self.query_one("#plan_display_container").set_class(new_state != self.STATE_DISPLAY_PLAN, "hidden")
+        plan_display_container = self.query_one("#plan_display_container")
+        plan_display_container.set_class(new_state != self.STATE_DISPLAY_PLAN, "hidden")
+
+        # Stats display in plan_buttons_container
+        plan_stats_display = self.query_one("#plan_stats_display", Static)
+        plan_stats_display.display = new_state == self.STATE_DISPLAY_PLAN
+        if new_state != self.STATE_DISPLAY_PLAN:
+            plan_stats_display.update("")
+
 
         # Elements within #feature_input_container
         feature_label = self.query_one("#feature_label", Static)
@@ -376,33 +385,41 @@ class FeatureInputApp(App[str | tuple[str, str] | None]):
         """
         self._llm_worker = None
         plan_display_widget = self.query_one("#plan_display_area", TextArea)
+        plan_stats_widget = self.query_one("#plan_stats_display", Static)
 
-        final_display_text = ""
+        plan_text_to_display = ""
+        stats_text = ""
+
+        model_name_for_stats = "N/A"
+        token_count_for_stats = "N/A"
 
         if isinstance(plan_data, tuple):
             plan_content, model_name, token_count = plan_data
             self.generated_plan_content = plan_content # Store the actual plan for exit
-
-            final_display_text = plan_content
-            final_display_text += f"\n\n---\nModel used: {model_name}"
+            plan_text_to_display = plan_content
+            model_name_for_stats = model_name
             if token_count is not None:
-                final_display_text += f"\nToken usage: {token_count} tokens"
-            else:
-                final_display_text += f"\nToken usage: N/A"
+                token_count_for_stats = f"{token_count} tokens"
         else: # It's an error string
             self.generated_plan_content = plan_data # Store the error message
-            final_display_text = plan_data
+            plan_text_to_display = plan_data
+            # Stats will remain N/A or as defaulted
+
+        plan_display_widget.load_text(plan_text_to_display)
+
+        # Prepare stats string
+        if self._llm_call_start_time is not None:
+            total_elapsed_time = time.monotonic() - self._llm_call_start_time
+            stats_text = f"Model: {model_name_for_stats} | Tokens: {token_count_for_stats} | Time: {total_elapsed_time:.2f}s"
+            self._llm_call_start_time = None
+        else:
+            stats_text = f"Model: {model_name_for_stats} | Tokens: {token_count_for_stats} | Time: N/A"
+
+        plan_stats_widget.update(stats_text)
 
         if self._loading_timer is not None:
             self._loading_timer.stop()
             self._loading_timer = None
-
-        if self._llm_call_start_time is not None:
-            total_elapsed_time = time.monotonic() - self._llm_call_start_time
-            final_display_text += f"\nTime taken: {total_elapsed_time:.2f} seconds"
-            self._llm_call_start_time = None
-
-        plan_display_widget.load_text(final_display_text) # Load the fully constructed text
 
         self._set_ui_state(self.STATE_DISPLAY_PLAN)
         # Reset loading subtext for next time

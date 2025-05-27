@@ -76,3 +76,12 @@ Button {
     margin-right: 1; /* Space between radio buttons if they were horizontal */
                      /* For vertical, this might not be needed, but doesn't hurt */
 }
+
+#plan_stats_display {
+    width: auto;
+    padding: 0 1; /* Vertical padding 0, horizontal padding 1 to match button internals */
+    margin-left: 2; /* Space between last button and stats text */
+    height: 1; /* Align with button height */
+    text-align: right;
+    color: $text-muted; /* Optional: make it less prominent than buttons */
+}
