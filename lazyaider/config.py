@@ -3,6 +3,8 @@ import sys
 import yaml
 
 CONFIG_FILENAME = ".lazyaider.conf.yml"
+LAZYAIDER_BASE_DIR = ".lazyaider" # Base directory for lazyaider files
+USER_PLANNER_PROMPT_FILENAME = "planner_prompt.md" # User-editable global planner prompt
 
 # Configuration Keys
 KEY_SIDEPANE_PERCENT_WIDTH = "sidepane_percent_width"

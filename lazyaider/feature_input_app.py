@@ -6,18 +6,20 @@ import tempfile
 import os
 import subprocess
 from textual.app import App, ComposeResult
+from textual.binding import Binding # Add Binding
 from textual.containers import Vertical, Horizontal
-from textual.widgets import Header, Footer, Button, Static, TextArea, LoadingIndicator, RadioSet, RadioButton # Add RadioSet, RadioButton
+from textual.widgets import Header, Footer, Button, Static, TextArea, LoadingIndicator, RadioSet, RadioButton
 from textual.worker import Worker
-from textual.timer import Timer # Add this import
+from textual.timer import Timer
 
 # Import the LLM planner function and config
 # generate_plan is only used in 'create_plan' mode
 # from .llm_planner import generate_plan
 from . import config # Import config to access settings like model name
 from . import tmux_utils # Import the whole module
+from .prompt import PLAN_GENERATION_PROMPT_TEMPLATE # Import the default template
 
-class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
+class FeatureInputApp(App[str | tuple[str, str] | None]):
     """
     App for feature description input and plan generation,
     or for editing existing text content (e.g., a plan section).
@@ -26,6 +28,7 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
     BINDINGS = [
         ("escape", "request_quit_or_reset", "Back/Cancel"),
         ("ctrl+o", "open_external_editor", "External Edit"),
+        ("ctrl+p", "edit_planner_prompt", "Edit Planner Prompt"),
     ]
     CSS_PATH = "feature_input_app.tcss"
 
@@ -35,6 +38,7 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
     STATE_INPUT_FEATURE = "input_feature"  # Also used by 'edit_section' for the main text area
     STATE_LOADING_PLAN = "loading_plan"    # Only for 'create_plan'
     STATE_DISPLAY_PLAN = "display_plan"    # Only for 'create_plan'
+    STATE_EDIT_PLANNER_PROMPT = "edit_planner_prompt" # New state for editing the planner prompt
 
     def __init__(self,
                  mode: str = "create_plan", # "create_plan" or "edit_section"
@@ -56,6 +60,11 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
         self._loading_timer: Timer | None = None
         self.repomix_available: bool = False # To track if repomix is available for 'create_plan'
 
+        # For planner prompt editing
+        self.user_planner_prompt_path = os.path.join(config.LAZYAIDER_BASE_DIR, config.USER_PLANNER_PROMPT_FILENAME)
+        self.previous_ui_state_for_prompt_edit: str | None = None # Stores the UI state before switching to prompt edit
+        self.prompt_editor_original_text_area_content: str | None = None # Stores text_area content before prompt edit
+
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -74,11 +83,14 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
                     with RadioSet(id="repomap_method_radioset"): # Visibility handled in on_mount
                         yield RadioButton("Aider's repomap", id="radio_aider_repomap", value="aider")
                         yield RadioButton("Repomix like a savage", id="radio_repomix", value="repomix")
-                    yield Button("Generate Plan", variant="primary", id="generate_plan_button") # Label updated in on_mount
-                    yield Button("Cancel", variant="error", id="cancel_initial_button") # Label updated in on_mount
+                    yield Button("Generate Plan", variant="primary", id="generate_plan_button")
+                    yield Button("Cancel", variant="error", id="cancel_initial_button")
+                    # Buttons for prompt editing - initially hidden, managed by _set_ui_state
+                    yield Button("Save Prompt", variant="success", id="save_prompt_button", classes="hidden")
+                    yield Button("Cancel Prompt Edit", variant="error", id="cancel_prompt_edit_button", classes="hidden")
 
             # Loading Indicator Area (State 2 - only for 'create_plan' mode)
-            with Vertical(id="loading_container", classes="hidden"): # Visibility handled in _set_ui_state
+            with Vertical(id="loading_container", classes="hidden"):
                 yield LoadingIndicator(id="spinner")
                 yield Static(
                     "This may take a moment. Press Esc to try and cancel.",
@@ -103,21 +115,56 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
     def _set_ui_state(self, new_state: str) -> None:
         self.current_ui_state = new_state
 
-        is_edit_mode = self.mode == "edit_section"
+        # Main containers visibility
+        # Feature input container is visible for input feature and prompt editing
+        is_feature_input_visible = new_state in [self.STATE_INPUT_FEATURE, self.STATE_EDIT_PLANNER_PROMPT]
+        self.query_one("#feature_input_container").set_class(not is_feature_input_visible, "hidden")
+        self.query_one("#loading_container").set_class(new_state != self.STATE_LOADING_PLAN, "hidden")
+        self.query_one("#plan_display_container").set_class(new_state != self.STATE_DISPLAY_PLAN, "hidden")
 
-        # Main input container is always visible in 'input_feature' state for both modes
-        self.query_one("#feature_input_container").set_class(new_state != self.STATE_INPUT_FEATURE, "hidden")
+        # Elements within #feature_input_container
+        feature_label = self.query_one("#feature_label", Static)
+        repomap_radioset = self.query_one("#repomap_method_radioset", RadioSet)
+        generate_plan_button = self.query_one("#generate_plan_button", Button)
+        cancel_initial_button = self.query_one("#cancel_initial_button", Button)
+        save_prompt_button = self.query_one("#save_prompt_button", Button)
+        cancel_prompt_edit_button = self.query_one("#cancel_prompt_edit_button", Button)
+        text_area_input = self.query_one("#feature_description_input", TextArea)
 
-        # Loading and plan display containers are only for 'create_plan' mode
-        self.query_one("#loading_container").set_class(is_edit_mode or new_state != self.STATE_LOADING_PLAN, "hidden")
-        self.query_one("#plan_display_container").set_class(is_edit_mode or new_state != self.STATE_DISPLAY_PLAN, "hidden")
 
-        # Plan buttons container (Save/Discard for generated plan) is part of plan_display_container, so implicitly handled.
+        is_input_feature_state = new_state == self.STATE_INPUT_FEATURE
+        is_edit_prompt_state = new_state == self.STATE_EDIT_PLANNER_PROMPT
 
-        if new_state == self.STATE_INPUT_FEATURE: # Focus main text area
-            self.query_one("#feature_description_input", TextArea).focus()
-        elif not is_edit_mode and new_state == self.STATE_DISPLAY_PLAN: # Focus plan display (only create_plan)
+        # Visibility and labels of buttons in feature_buttons_container
+        repomap_radioset.display = is_input_feature_state and self.mode == "create_plan"
+        generate_plan_button.display = is_input_feature_state
+        cancel_initial_button.display = is_input_feature_state
+
+        save_prompt_button.display = is_edit_prompt_state
+        cancel_prompt_edit_button.display = is_edit_prompt_state
+
+        # Update labels and focus based on state
+        if is_input_feature_state:
+            text_area_input.read_only = False
+            if self.mode == "edit_section":
+                feature_label.update("Edit Section Content:")
+                generate_plan_button.label = "Save Changes"
+                cancel_initial_button.label = "Discard & Exit"
+            else: # create_plan
+                feature_label.update("Describe the feature you want to implement:")
+                generate_plan_button.label = "Generate Plan"
+                cancel_initial_button.label = "Cancel"
+            text_area_input.focus()
+        elif is_edit_prompt_state:
+            text_area_input.read_only = False
+            feature_label.update(f"Editing Planner Prompt ({self.user_planner_prompt_path}):")
+            text_area_input.focus()
+        elif new_state == self.STATE_DISPLAY_PLAN: # Only for create_plan mode
+            # Plan display area is already read_only by default
             self.query_one("#plan_display_area", TextArea).focus()
+        elif new_state == self.STATE_LOADING_PLAN:
+            text_area_input.read_only = True # Make input read-only while loading
+            pass # No specific focus, loading indicator is shown
 
 
     async def on_mount(self) -> None:
@@ -152,35 +199,27 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
                 print(f"Warning: Failed to set theme '{theme_name_from_config}': {e}. Falling back to default.", file=sys.stderr)
                 self.dark = config.DEFAULT_THEME_NAME == "dark"
 
-        # Mode-specific UI setup
+        # Mode-specific UI setup for initial state (STATE_INPUT_FEATURE)
         feature_desc_input_widget = self.query_one("#feature_description_input", TextArea)
-        generate_button_widget = self.query_one("#generate_plan_button", Button)
-        cancel_button_widget = self.query_one("#cancel_initial_button", Button)
-        feature_label_widget = self.query_one("#feature_label", Static)
         repomap_radioset_widget = self.query_one("#repomap_method_radioset", RadioSet)
-        # The line "repomap_container = repomap_radioset_widget.parent" was removed.
-        # Hiding repomap_container (parent of RadioSet) was hiding the entire button row.
 
         if self.mode == "edit_section":
             feature_desc_input_widget.text = self.initial_text or ""
-            generate_button_widget.label = "Save Changes"
-            cancel_button_widget.label = "Discard & Exit" # Or "Cancel Edit" - "Discard & Exit" is consistent
-            feature_label_widget.update("Edit Section Content:")
-            repomap_radioset_widget.display = False # Hide the RadioSet widget itself
-            # Ensure loading and plan display areas are hidden from the start for edit_mode
-            self.query_one("#loading_container").display = False
-            self.query_one("#plan_display_container").display = False
-        else: # create_plan mode
-            # Check for repomix availability and configure RadioButton
+            # Other elements like button labels and visibility are handled by _set_ui_state
+            self.query_one("#loading_container").display = False # Ensure hidden if starting in edit_section
+            self.query_one("#plan_display_container").display = False # Ensure hidden
+        else: # create_plan mode (default)
+            if self.initial_text: # Allow pre-filling feature description for create_plan mode
+                feature_desc_input_widget.text = self.initial_text
             repomix_path = shutil.which("repomix")
             self.repomix_available = repomix_path is not None
             radio_repomix_button = self.query_one("#radio_repomix", RadioButton)
             if not self.repomix_available:
                 radio_repomix_button.disabled = True
                 radio_repomix_button.label = "Repomix (not found)"
-            repomap_radioset_widget.value = "aider" # Default for create_plan
+            repomap_radioset_widget.value = "aider"
 
-        self._set_ui_state(self.STATE_INPUT_FEATURE) # Initial state for both modes
+        self._set_ui_state(self.STATE_INPUT_FEATURE) # Set initial state and UI elements
 
     def watch_theme(self, old_theme: str | None, new_theme: str | None) -> None:
         """Saves the theme when it changes."""
@@ -194,11 +233,38 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
         new_theme_name = "dark" if dark else "light"
         config.update_theme_in_config(new_theme_name)
 
+    async def action_edit_planner_prompt(self) -> None:
+        """Switches to the planner prompt editing mode."""
+        if self.current_ui_state == self.STATE_EDIT_PLANNER_PROMPT: # Already in this mode
+            return
+
+        text_area = self.query_one("#feature_description_input", TextArea)
+        self.previous_ui_state_for_prompt_edit = self.current_ui_state
+        # Save the current content of the text_area before loading the prompt
+        self.prompt_editor_original_text_area_content = text_area.text
+
+        prompt_content_to_load = ""
+        try:
+            # Ensure .lazyaider directory exists
+            os.makedirs(config.LAZYAIDER_BASE_DIR, exist_ok=True)
+            if os.path.exists(self.user_planner_prompt_path):
+                with open(self.user_planner_prompt_path, "r", encoding="utf-8") as f:
+                    prompt_content_to_load = f.read()
+            else:
+                prompt_content_to_load = PLAN_GENERATION_PROMPT_TEMPLATE # Default content
+        except Exception as e:
+            self.notify(f"Error loading prompt: {e}", severity="error", timeout=5)
+            prompt_content_to_load = PLAN_GENERATION_PROMPT_TEMPLATE # Fallback to default
+
+        text_area.load_text(prompt_content_to_load)
+        self._set_ui_state(self.STATE_EDIT_PLANNER_PROMPT)
+
+
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         button_id = event.button.id
         description_area = self.query_one("#feature_description_input", TextArea)
 
-        if button_id == "generate_plan_button": # "Generate Plan" or "Save Changes"
+        if button_id == "generate_plan_button" and self.current_ui_state == self.STATE_INPUT_FEATURE: # "Generate Plan" or "Save Changes"
             if self.mode == "edit_section":
                 edited_text = description_area.text
                 self.exit(edited_text) # Return the edited text
@@ -242,18 +308,53 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
                 self._llm_worker = self.run_worker(bound_call_generate_plan, thread=True)
                 # --- End LLM plan generation ---
 
-        elif button_id == "cancel_initial_button": # "Cancel" or "Discard & Exit"
+        elif button_id == "cancel_initial_button" and self.current_ui_state == self.STATE_INPUT_FEATURE: # "Cancel" or "Discard & Exit"
             self.exit(None) # Exit without returning data
 
-        elif button_id == "save_plan_button": # Only for 'create_plan' mode (saves LLM generated plan)
+        elif button_id == "save_plan_button" and self.current_ui_state == self.STATE_DISPLAY_PLAN: # Only for 'create_plan' mode
             if self.generated_plan_content is not None and self.feature_description_content is not None:
-                # Return tuple for 'create_plan' mode
                 self.exit((self.generated_plan_content, self.feature_description_content))
             else:
                 self.exit(None)
 
-        elif button_id == "discard_plan_button": # Only for 'create_plan' mode (discards LLM generated plan)
+        elif button_id == "discard_plan_button" and self.current_ui_state == self.STATE_DISPLAY_PLAN: # Only for 'create_plan' mode
             self.exit(None)
+
+        elif button_id == "save_prompt_button" and self.current_ui_state == self.STATE_EDIT_PLANNER_PROMPT:
+            prompt_content_to_save = description_area.text
+            try:
+                os.makedirs(config.LAZYAIDER_BASE_DIR, exist_ok=True) # Ensure dir exists
+                with open(self.user_planner_prompt_path, "w", encoding="utf-8") as f:
+                    f.write(prompt_content_to_save)
+                self.notify("Planner prompt saved.", timeout=3)
+            except Exception as e:
+                self.notify(f"Error saving prompt: {e}", severity="error", timeout=5)
+                return # Stay in edit mode on error
+
+            # Restore previous state and text area content
+            if self.previous_ui_state_for_prompt_edit:
+                self._set_ui_state(self.previous_ui_state_for_prompt_edit)
+                if self.prompt_editor_original_text_area_content is not None:
+                    description_area.load_text(self.prompt_editor_original_text_area_content)
+                self.previous_ui_state_for_prompt_edit = None
+                self.prompt_editor_original_text_area_content = None
+            else: # Fallback if no previous state (should not happen if logic is correct)
+                self._set_ui_state(self.STATE_INPUT_FEATURE) # Default to input feature state
+                description_area.load_text(self.initial_text or "") # Restore initial text or clear
+
+        elif button_id == "cancel_prompt_edit_button" and self.current_ui_state == self.STATE_EDIT_PLANNER_PROMPT:
+            # Restore previous state and text area content
+            if self.previous_ui_state_for_prompt_edit:
+                self._set_ui_state(self.previous_ui_state_for_prompt_edit)
+                if self.prompt_editor_original_text_area_content is not None:
+                    description_area.load_text(self.prompt_editor_original_text_area_content)
+                self.previous_ui_state_for_prompt_edit = None
+                self.prompt_editor_original_text_area_content = None
+            else: # Fallback
+                self._set_ui_state(self.STATE_INPUT_FEATURE)
+                description_area.load_text(self.initial_text or "") # Restore initial text or clear
+            self.notify("Prompt editing cancelled.", timeout=3)
+
 
     def _call_generate_plan(self, description: str, repomap_method: str, generate_plan_func) -> None:
         """
@@ -317,31 +418,46 @@ class FeatureInputApp(App[str | tuple[str, str] | None]): # Modified return type
 
 
     async def action_request_quit_or_reset(self) -> None:
-        """Handles Escape key. Behavior depends on mode and current UI state."""
-        if self.mode == "edit_section":
-            # In edit mode, Esc always means cancel/discard changes
-            self.exit(None)
-        else: # create_plan mode
-            if self.current_ui_state == self.STATE_DISPLAY_PLAN:
-                # On plan display (after LLM), Esc discards and exits
-                self.exit(None)
-            elif self.current_ui_state == self.STATE_LOADING_PLAN:
-                # While LLM is loading, Esc attempts to cancel
-                if self._loading_timer is not None:
-                    self._loading_timer.stop()
-                    self._loading_timer = None
-                self._llm_call_start_time = None
+        """Handles Escape key. Behavior depends on current UI state."""
+        text_area = self.query_one("#feature_description_input", TextArea)
 
-                if self._llm_worker is not None:
-                    await self._llm_worker.cancel()
-                    self._llm_worker = None
-                    self.query_one("#loading_subtext", Static).update("Cancellation requested... returning to input.")
-                    # Use a short delay before resetting UI state to allow message to be seen
-                    self.set_timer(0.5, lambda: self._set_ui_state(self.STATE_INPUT_FEATURE))
-                else: # Should not happen if worker was supposed to be running
-                    self._set_ui_state(self.STATE_INPUT_FEATURE)
-            else: # STATE_INPUT_FEATURE (in create_plan mode)
-                self.exit(None)
+        if self.current_ui_state == self.STATE_EDIT_PLANNER_PROMPT:
+            # Cancel prompt editing and return to the previous state
+            if self.previous_ui_state_for_prompt_edit:
+                self._set_ui_state(self.previous_ui_state_for_prompt_edit)
+                if self.prompt_editor_original_text_area_content is not None:
+                    text_area.load_text(self.prompt_editor_original_text_area_content)
+                # Reset tracking variables
+                self.previous_ui_state_for_prompt_edit = None
+                self.prompt_editor_original_text_area_content = None
+                self.notify("Prompt editing cancelled. Press Esc again to exit app.", timeout=3)
+                return # Stay in the app, in the restored state
+            else: # Fallback if somehow previous_ui_state_for_prompt_edit is None
+                self._set_ui_state(self.STATE_INPUT_FEATURE) # Default to input feature
+                text_area.load_text(self.initial_text or "") # Restore initial text or clear
+                self.notify("Prompt editing cancelled. Press Esc again to exit app.", timeout=3)
+                return
+
+        elif self.current_ui_state == self.STATE_DISPLAY_PLAN:
+            # On plan display (after LLM), Esc discards and exits
+            self.exit(None)
+        elif self.current_ui_state == self.STATE_LOADING_PLAN:
+            # While LLM is loading, Esc attempts to cancel
+            if self._loading_timer is not None:
+                self._loading_timer.stop()
+                self._loading_timer = None
+            self._llm_call_start_time = None
+
+            if self._llm_worker is not None:
+                await self._llm_worker.cancel()
+                self._llm_worker = None
+                self.query_one("#loading_subtext", Static).update("Cancellation requested... returning to input.")
+                self.set_timer(0.5, lambda: self._set_ui_state(self.STATE_INPUT_FEATURE))
+            else: # Should not happen if worker was supposed to be running
+                self._set_ui_state(self.STATE_INPUT_FEATURE)
+        else: # STATE_INPUT_FEATURE (applies to both 'create_plan' and 'edit_section' modes)
+            # Default behavior: exit the app
+            self.exit(None)
 
     def _update_text_area_from_external(self, text_content: str | None) -> None:
         """Called from worker thread to update TextArea and handle cleanup."""

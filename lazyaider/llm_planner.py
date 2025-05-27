@@ -57,24 +57,45 @@ def generate_plan(
             api_key_to_use = os.getenv("ANTHROPIC_API_KEY")
     # Add more checks for other providers as needed, following the same pattern
 
-    prompt_override_path = config.get_plan_prompt_override_path(session_name)
     actual_prompt_template = DEFAULT_PLAN_GENERATION_PROMPT_TEMPLATE
+    prompt_source_description = "default built-in template"
     using_custom_prompt = False
-    if prompt_override_path:
-        try:
-            # Ensure path is not empty before trying to open
-            if prompt_override_path.strip():
-                with open(prompt_override_path, 'r', encoding='utf-8') as f:
-                    actual_prompt_template = f.read()
-                print(f"Using custom prompt template from: {prompt_override_path}", file=sys.stderr)
-                using_custom_prompt = True
-            else: # Path is an empty string, treat as no override
-                print(f"Info: Plan generation prompt override path is empty. Using default template.", file=sys.stderr)
+    loaded_prompt_path = None # Will store the path of the prompt file if one is loaded
 
+    # 1. Check for session-specific or global override from .lazyaider.conf.yml
+    config_file_override_path = config.get_plan_prompt_override_path(session_name)
+
+    # 2. Construct path for the user-editable global prompt file
+    user_global_prompt_path = os.path.join(config.LAZYAIDER_BASE_DIR, config.USER_PLANNER_PROMPT_FILENAME)
+
+    prompt_file_to_load = None
+    if config_file_override_path:
+        prompt_file_to_load = config_file_override_path
+        prompt_source_description = f"configuration file: {config_file_override_path}"
+    elif os.path.exists(user_global_prompt_path):
+        # Ensure .lazyaider directory exists before trying to use the path from it
+        # This check might be redundant if user_global_prompt_path existing implies .lazyaider exists
+        # but good for safety. os.path.exists(user_global_prompt_path) already covers this.
+        prompt_file_to_load = user_global_prompt_path
+        prompt_source_description = f"user-defined global prompt: {user_global_prompt_path}"
+
+    if prompt_file_to_load:
+        try:
+            if prompt_file_to_load.strip(): # Ensure path is not empty
+                with open(prompt_file_to_load, 'r', encoding='utf-8') as f:
+                    actual_prompt_template = f.read()
+                print(f"Using prompt template from: {prompt_source_description}", file=sys.stderr)
+                using_custom_prompt = True
+                loaded_prompt_path = prompt_file_to_load
+            else:
+                print(f"Info: Prompt override path from {prompt_source_description} is empty. Using default template.", file=sys.stderr)
         except FileNotFoundError:
-            print(f"Warning: Prompt template file not found at {prompt_override_path}. Using default template.", file=sys.stderr)
+            print(f"Warning: Prompt template file not found at {prompt_file_to_load} (source: {prompt_source_description}). Using default template.", file=sys.stderr)
         except Exception as e:
-            print(f"Warning: Could not load prompt template from {prompt_override_path}: {e}. Using default template.", file=sys.stderr)
+            print(f"Warning: Could not load prompt template from {prompt_file_to_load} (source: {prompt_source_description}): {e}. Using default template.", file=sys.stderr)
+    else:
+        print(f"Using {prompt_source_description}.", file=sys.stderr)
+
 
     # Get the repository map based on the selected method
     repository_map_content = ""
@@ -127,8 +148,10 @@ def generate_plan(
         # This happens if the prompt template is missing a required placeholder
         error_message = f"Error: The prompt template is missing a required placeholder. Offending key: {e}."
         error_message += " Expected placeholders are typically {feature_description} and {repository_map}."
-        if using_custom_prompt:
-            error_message += f" Please check the custom prompt file: {prompt_override_path}"
+        if using_custom_prompt and loaded_prompt_path:
+            error_message += f" Please check the custom prompt file: {loaded_prompt_path}"
+        elif using_custom_prompt: # Custom prompt was used but path somehow not set (should not happen)
+             error_message += " Please check the custom prompt file."
         else:
             error_message += " This might be an issue with the default prompt template."
         print(error_message, file=sys.stderr)
