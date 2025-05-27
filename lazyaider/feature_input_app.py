@@ -258,10 +258,25 @@ class FeatureInputApp(App[str | tuple[str, str] | None]):
                 with open(self.user_planner_prompt_path, "r", encoding="utf-8") as f:
                     prompt_content_to_load = f.read()
             else:
-                prompt_content_to_load = PLAN_GENERATION_PROMPT_TEMPLATE # Default content
+                # .lazyaider/planner_prompt.md does not exist, try to initialize from config override
+                config_override_path = config.get_plan_prompt_override_path(session_name=None) # Check global override
+                loaded_from_config_override = False
+                if config_override_path and config_override_path.strip() and os.path.exists(config_override_path):
+                    try:
+                        with open(config_override_path, "r", encoding="utf-8") as f_override:
+                            prompt_content_to_load = f_override.read()
+                        loaded_from_config_override = True
+                        self.notify(f"Initialized new prompt from: {os.path.basename(config_override_path)}", timeout=4)
+                    except Exception as e_override:
+                        self.notify(f"Error reading override prompt '{os.path.basename(config_override_path)}': {e_override}. Using default template.", severity="warning", timeout=7)
+                        prompt_content_to_load = PLAN_GENERATION_PROMPT_TEMPLATE
+                
+                if not loaded_from_config_override:
+                    prompt_content_to_load = PLAN_GENERATION_PROMPT_TEMPLATE # Default content
+                    self.notify("Initialized new prompt with default template.", timeout=3)
         except Exception as e:
-            self.notify(f"Error loading prompt: {e}", severity="error", timeout=5)
-            prompt_content_to_load = PLAN_GENERATION_PROMPT_TEMPLATE # Fallback to default
+            self.notify(f"Error preparing prompt editor: {e}", severity="error", timeout=5)
+            prompt_content_to_load = PLAN_GENERATION_PROMPT_TEMPLATE # Fallback to default in case of other errors
 
         text_area.load_text(prompt_content_to_load)
         self._set_ui_state(self.STATE_EDIT_PLANNER_PROMPT)
