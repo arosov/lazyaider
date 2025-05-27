@@ -15,8 +15,6 @@ KEY_SESSION_ACTIVE_PLAN_NAME = "active_plan_name" # Stores the active plan direc
 KEY_SESSION_PLAN_PROGRESS = "plan_progress" # Stores progress for each plan within a session
 KEY_LAST_AIDER_STEP = "last_aider_step" # Stores the index of the last step sent to Aider for a plan
 KEY_TEXT_EDITOR = "text_editor" # Command to launch the external text editor
-KEY_AIDER_INPUT_DELAY = "aider_input_delay" # Delay in seconds before M-Enter and subsequent line
-KEY_MULTILINE_SECTION_PASTE = "multiline_section_paste" # Boolean to control multi-line prompt sending
 
 DEFAULT_SIDEPANE_PERCENT_WIDTH = 20
 DEFAULT_THEME_NAME = "light" # Textual's default theme
@@ -24,8 +22,6 @@ DEFAULT_LLM_MODEL = "gpt-3.5-turbo" # Default LLM model
 DEFAULT_LLM_API_KEY = None # Default LLM API key
 DEFAULT_PLAN_GENERATION_PROMPT_OVERRIDE_PATH = None # Default global path for prompt override file
 DEFAULT_TEXT_EDITOR = None # Default external text editor command
-DEFAULT_AIDER_INPUT_DELAY = 0.3 # Default delay in seconds
-DEFAULT_MULTILINE_SECTION_PASTE = False # Default to sending multi-line prompts as single-line
 
 def find_config_file() -> str | None:
     """
@@ -170,22 +166,6 @@ def load_config() -> dict:
         config[KEY_TEXT_EDITOR] = None
     elif KEY_TEXT_EDITOR not in config: # Not present at all
         config[KEY_TEXT_EDITOR] = DEFAULT_TEXT_EDITOR
-
-    # Ensure aider_input_delay is a float or int
-    aider_delay_val = config.get(KEY_AIDER_INPUT_DELAY)
-    if not isinstance(aider_delay_val, (float, int)):
-        if KEY_AIDER_INPUT_DELAY in config: # Value exists but is not a number
-            print(f"Warning: '{KEY_AIDER_INPUT_DELAY}' in {config_path or 'config'} is not a number. Using default value.", file=sys.stderr)
-        config[KEY_AIDER_INPUT_DELAY] = DEFAULT_AIDER_INPUT_DELAY
-    elif aider_delay_val < 0: # Ensure delay is not negative
-        print(f"Warning: '{KEY_AIDER_INPUT_DELAY}' in {config_path or 'config'} is negative. Using default value.", file=sys.stderr)
-        config[KEY_AIDER_INPUT_DELAY] = DEFAULT_AIDER_INPUT_DELAY
-
-    # Ensure multiline_section_paste is a boolean
-    if not isinstance(config.get(KEY_MULTILINE_SECTION_PASTE), bool):
-        if KEY_MULTILINE_SECTION_PASTE in config: # Value exists but is not a bool
-            print(f"Warning: '{KEY_MULTILINE_SECTION_PASTE}' in {config_path or 'config'} is not a boolean. Using default value.", file=sys.stderr)
-        config[KEY_MULTILINE_SECTION_PASTE] = DEFAULT_MULTILINE_SECTION_PASTE
 
     return config
 

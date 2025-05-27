@@ -2,7 +2,6 @@ import subprocess # Still needed for CalledProcessError
 import re # For parsing markdown sections
 import shutil # For file copying
 import sys # To get the current python interpreter path
-import time # For adding delays
 from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, VerticalScroll, Vertical, Grid
