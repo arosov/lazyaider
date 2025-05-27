@@ -16,6 +16,7 @@ LazyAider is a terminal-based tool designed to streamline your development workf
 *   **AI-Powered Plan Generation**:
     *   Describe a feature or task in natural language.
     *   LazyAider (via `plan_generator.py`) interacts with an LLM to break down the description into a step-by-step actionable plan.
+    *   Review and modify the default planner prompt (`.lazyaider/planner_prompt.md`) directly within the plan generation TUI (Ctrl+J).
     *   Plans are saved as markdown files for review and use.
 *   **Interactive Task Sidebar**:
     *   The main LazyAider interface is a Textual sidebar application running within a tmux pane.
@@ -25,7 +26,6 @@ LazyAider is a terminal-based tool designed to streamline your development workf
     *   The "Start Aider" button will first look for an `aider.sh` script in the current working directory and execute it if present. If not found, it will run the `aider` command.
 *   **Plan & Section Editing**:
     *   Edit feature descriptions or individual plan sections using a built-in interface or an external text editor.
-    *   Review and modify the global planner prompt (`.lazyaider/planner_prompt.md`) directly within the plan generation TUI (Ctrl+J).
 *   **Configuration**:
     *   Customize LazyAider through a `.lazyaider.conf.yml` file.
     *   Settings include LLM model, API key, UI theme, preferred text editor, and more.
@@ -164,7 +164,7 @@ LazyAider uses a configuration file named `.lazyaider.conf.yml` located in the p
 *   `text_editor`: The command to launch your preferred external text editor for editing plan sections or descriptions (e.g., `nvim`, `code --wait`).
 *   `managed_sessions`: A dictionary storing information about sessions managed by LazyAider, including the active plan for each session.
 *   `plan_generation_prompt_override_path`: Optional path to a custom prompt template file. This can be set globally or per session.
-    *   **If set (and the file exists), this template will be used by the planner, taking precedence over the TUI-editable global prompt (`.lazyaider/planner_prompt.md`).**
+    *   **If set (and the file exists), this template will be used by the planner, taking precedence over default prompt.**
     *   The TUI prompt editor (Ctrl+J) edits `.lazyaider/planner_prompt.md`. For these TUI edits to be used by the planner, ensure `plan_generation_prompt_override_path` is *not* set (or is null/empty) in your `.lazyaider.conf.yml` for the relevant scope (global or session).
     *   If `.lazyaider/planner_prompt.md` does not exist when initiating TUI editing, its content will be initialized from the global `plan_generation_prompt_override_path` (if set and valid), otherwise from the default built-in template.
 
