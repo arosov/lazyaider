@@ -416,38 +416,31 @@ class Sidebar(App):
                         return
 
                     from lazyaider import config as app_config_module # Ensure access to config
-                    use_multiline_paste = app_config_module.settings.get(
-                        app_config_module.KEY_MULTILINE_SECTION_PASTE,
-                        app_config_module.DEFAULT_MULTILINE_SECTION_PASTE
-                    )
 
-                    if use_multiline_paste:
-                        prompt_lines = full_prompt_content.split('\n')
-                        first_prompt_line = prompt_lines[0].strip()
-                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f"{aider_command_prefix}{first_prompt_line}")
-                        self.log(f"Sent to Aider (first prompt line, multi-line mode): {aider_command_prefix.strip()} {first_prompt_line[:50]}...")
+                    # New sending logic for non-empty content
+                    self.log(f"Sending section {section_index} ({action_type}) to Aider using /multiline wrapper.")
 
-                        m_enter_delay = app_config_module.settings.get(
-                            app_config_module.KEY_AIDER_M_ENTER_DELAY,
-                            app_config_module.DEFAULT_AIDER_M_ENTER_DELAY
-                        )
-                        for i, line in enumerate(prompt_lines[1:]):
-                            if not line.strip(): # Skip lines that are empty after stripping
-                                # If you want to preserve blank lines as M-Enter, this logic would need adjustment
-                                continue
-                            time.sleep(m_enter_delay)
-                            tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "M-Enter")
-                            tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f" {line.strip()}")
-                            self.log(f"Sent to Aider (prompt line {i+2}, multi-line mode): {line[:50]}... with delay {m_enter_delay}s")
-                    else:
-                        # Single-line mode: replace newlines with spaces
-                        single_line_prompt = full_prompt_content.replace('\n', ' ')
-                        tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f"{aider_command_prefix}{single_line_prompt}")
-                        self.log(f"Sent to Aider (single-line mode): {aider_command_prefix.strip()} {single_line_prompt[:100]}...")
-
-                    # Finally, send Enter to submit the whole command
+                    # 1. Start multiline mode in Aider
+                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "/multiline")
                     tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter")
-                    self.log(f"Submitted command to Aider for section {section_index} ({action_type}). Mode: {'multi-line' if use_multiline_paste else 'single-line'}.")
+                    self.log("Sent to Aider: /multiline (start)")
+
+                    # 2. Send the command prefix and the full prompt content
+                    # Newlines in full_prompt_content will be sent as Enter key presses by send_keys_to_pane.
+                    # This is the desired behavior when Aider is in /multiline input mode.
+                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f"{aider_command_prefix}{full_prompt_content}")
+                    self.log(f"Sent to Aider (content): {aider_command_prefix.strip()} {full_prompt_content[:100]}...")
+
+                    # 3. Send M-Enter to signal end of multiline input block to Aider
+                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "M-Enter")
+                    self.log("Sent to Aider: M-Enter")
+
+                    # 4. Send /multiline again to toggle off and submit the accumulated message
+                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "/multiline")
+                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "M-Enter") # This Enter submits the command
+                    self.log("Sent to Aider: /multiline (end and submit)")
+
+                    self.log(f"Submitted command to Aider for section {section_index} ({action_type}) using /multiline wrapper.")
 
                     # Save the last successfully processed step
                     if self.TMUX_SESSION_NAME and self.current_selected_plan_name:
@@ -459,7 +452,7 @@ class Sidebar(App):
                         self.log(f"Saved last Aider step for plan '{self.current_selected_plan_name}', section {section_index}.")
 
                 except Exception as e:
-                    self.log.error(f"Error sending multi-line prompt to tmux: {e}")
+                    self.log.error(f"Error sending command/prompt to tmux: {e}")
 
             elif action_type == "edit":
                 self.log(f"Plan section Edit button: Index {section_index}")
@@ -550,7 +543,7 @@ class Sidebar(App):
                         label_to_style.styles.color = None # No progress, all default
                 except Exception:
                     self.log.warning(f"Could not find label #section_label_{i} for styling during color update.")
-            
+
             if last_processed_index is not None:
                 self.log(f"Updated section label colors based on last processed index: {last_processed_index}.")
             else:
