@@ -266,11 +266,10 @@ class FeatureInputApp(App[str | tuple[str, str] | None]):
                         with open(config_override_path, "r", encoding="utf-8") as f_override:
                             prompt_content_to_load = f_override.read()
                         loaded_from_config_override = True
-                        self.notify(f"Initialized new prompt from: {os.path.basename(config_override_path)}", timeout=4)
+                        self.notify(f"Initialized new prompt from: {config_override_path}", timeout=4)
                     except Exception as e_override:
-                        self.notify(f"Error reading override prompt '{os.path.basename(config_override_path)}': {e_override}. Using default template.", severity="warning", timeout=7)
+                        self.notify(f"Error reading override prompt '{config_override_path}': {e_override}. Using default template.", severity="warning", timeout=7)
                         prompt_content_to_load = PLAN_GENERATION_PROMPT_TEMPLATE
-                
                 if not loaded_from_config_override:
                     prompt_content_to_load = PLAN_GENERATION_PROMPT_TEMPLATE # Default content
                     self.notify("Initialized new prompt with default template.", timeout=3)
@@ -410,13 +409,13 @@ class FeatureInputApp(App[str | tuple[str, str] | None]):
 
             prompt_tokens_str = str(prompt_tokens) if prompt_tokens is not None else "N/A"
             completion_tokens_str = str(completion_tokens) if completion_tokens is not None else "N/A"
-            
+
             time_taken_str = "N/A"
             if self._llm_call_start_time is not None:
                 total_elapsed_time = time.monotonic() - self._llm_call_start_time
                 time_taken_str = f"{total_elapsed_time:.2f}s"
                 self._llm_call_start_time = None
-            
+
             plan_label_widget.update(
                 f"Generated plan with {model_name} in {time_taken_str} "
                 f"(Tokens in: {prompt_tokens_str}, out: {completion_tokens_str})"
