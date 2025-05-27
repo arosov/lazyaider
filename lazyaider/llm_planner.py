@@ -11,7 +11,7 @@ def generate_plan(
     session_name: str | None = None,
     repomap_method: str = "aider",
     prompt_dump_file: str | None = None
-) -> tuple[str, str, int | None] | str:
+) -> tuple[str, str, int | None, int | None, int | None] | str:
     """
     Generates a development plan in Markdown format using an LLM.
     Uses session-specific prompt override if available, else global, else default.
@@ -22,7 +22,7 @@ def generate_plan(
         feature_description: The user's description of the feature to implement.
 
     Returns:
-        On success, a tuple: (plan_content: str, model_name: str, total_tokens: int | None).
+        On success, a tuple: (plan_content: str, model_name: str, prompt_tokens: int | None, completion_tokens: int | None, total_tokens: int | None).
         On failure, an error message string.
     """
     # Ensure config is loaded. `config.settings` should be available.
@@ -181,15 +181,27 @@ def generate_plan(
         if response.choices and response.choices[0].message and response.choices[0].message.content:
             plan_content = response.choices[0].message.content.strip()
 
+            prompt_tokens: int | None = None
+            completion_tokens: int | None = None
             total_tokens: int | None = None
-            if response.usage and hasattr(response.usage, 'total_tokens'):
-                total_tokens = response.usage.total_tokens
 
-            # Log to stderr for debugging/logging, UI will display it too
-            token_msg = f"{total_tokens} tokens" if total_tokens is not None else "token usage N/A"
-            print(f"LLM ({model}) response received. Usage: {token_msg}.", file=sys.stderr)
+            if response.usage:
+                if hasattr(response.usage, 'prompt_tokens'):
+                    prompt_tokens = response.usage.prompt_tokens
+                if hasattr(response.usage, 'completion_tokens'):
+                    completion_tokens = response.usage.completion_tokens
+                if hasattr(response.usage, 'total_tokens'):
+                    total_tokens = response.usage.total_tokens
+            
+            # Log to stderr for debugging/logging
+            token_log_msg = (
+                f"Input: {prompt_tokens if prompt_tokens is not None else 'N/A'}, "
+                f"Output: {completion_tokens if completion_tokens is not None else 'N/A'}, "
+                f"Total: {total_tokens if total_tokens is not None else 'N/A'} tokens."
+            )
+            print(f"LLM ({model}) response received. Usage: {token_log_msg}", file=sys.stderr)
 
-            return plan_content, model, total_tokens
+            return plan_content, model, prompt_tokens, completion_tokens, total_tokens
         else:
             error_message = "Error: LLM response structure was unexpected or content was empty."
             print(error_message, file=sys.stderr)
@@ -246,7 +258,8 @@ if __name__ == '__main__':
 
     print("\n--- Generated Plan (Global/Default Prompt) ---")
     if isinstance(plan_data_global, tuple):
-        plan_content, _, _ = plan_data_global
+        plan_content, model_name_test, p_tokens, c_tokens, t_tokens = plan_data_global
+        print(f"(Model: {model_name_test}, Tokens: In={p_tokens or 'N/A'} Out={c_tokens or 'N/A'} Total={t_tokens or 'N/A'})")
         print(plan_content)
         if not plan_content.startswith("# Error Generating Plan"):
             try:

@@ -123,9 +123,13 @@ def main(): # Wrap existing __main__ block in a main() function
         )
 
         if isinstance(plan_result, tuple):
-            plan_content_cli, model_name_cli, tokens_cli = plan_result
-            token_msg = f"{tokens_cli} tokens" if tokens_cli is not None else "token usage N/A"
-            print(f"Plan generated using {model_name_cli}. Usage: {token_msg}.", file=sys.stderr)
+            plan_content_cli, model_name_cli, p_tokens_cli, c_tokens_cli, t_tokens_cli = plan_result
+            token_msg = (
+                f"Input: {p_tokens_cli if p_tokens_cli is not None else 'N/A'}, "
+                f"Output: {c_tokens_cli if c_tokens_cli is not None else 'N/A'}, "
+                f"Total: {t_tokens_cli if t_tokens_cli is not None else 'N/A'} tokens."
+            )
+            print(f"Plan generated using {model_name_cli}. Usage: {token_msg}", file=sys.stderr)
             _process_and_save_plan(plan_content_cli, feature_description_cli)
             sys.exit(0)
         else: # Error string

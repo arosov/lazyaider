@@ -124,12 +124,10 @@ class FeatureInputApp(App[str | tuple[str, str] | None]):
         plan_display_container = self.query_one("#plan_display_container")
         plan_display_container.set_class(new_state != self.STATE_DISPLAY_PLAN, "hidden")
 
-        # Stats display in plan_buttons_container
-        plan_stats_display = self.query_one("#plan_stats_display", Static)
-        plan_stats_display.display = new_state == self.STATE_DISPLAY_PLAN
+        # Reset plan label if not in display state or if it's being hidden
+        plan_label_widget = self.query_one("#plan_label", Static)
         if new_state != self.STATE_DISPLAY_PLAN:
-            plan_stats_display.update("")
-
+            plan_label_widget.update("Generated Plan:") # Reset to default
 
         # Elements within #feature_input_container
         feature_label = self.query_one("#feature_label", Static)
@@ -371,51 +369,52 @@ class FeatureInputApp(App[str | tuple[str, str] | None]):
         and then update UI from thread. Only for 'create_plan' mode.
         """
         try:
-            plan_data = generate_plan_func(description, session_name=None, repomap_method=repomap_method)
-            self.call_from_thread(self._handle_plan_generation_result, plan_data)
+            # generate_plan_func now returns: plan_content, model_name, prompt_tokens, completion_tokens, total_tokens
+            plan_data_result = generate_plan_func(description, session_name=None, repomap_method=repomap_method)
+            self.call_from_thread(self._handle_plan_generation_result, plan_data_result)
         except Exception as e:
             error_message = f"# Error During Plan Generation Call\n\nAn unexpected error occurred: {type(e).__name__} - {e}"
             self.call_from_thread(self._handle_plan_generation_result, error_message)
 
 
-    def _handle_plan_generation_result(self, plan_data: tuple[str, str, int | None] | str) -> None:
+    def _handle_plan_generation_result(self, plan_data: tuple[str, str, int | None, int | None, int | None] | str) -> None:
         """
         Called from worker thread with the result of plan generation.
         Only for 'create_plan' mode.
         """
         self._llm_worker = None
         plan_display_widget = self.query_one("#plan_display_area", TextArea)
-        plan_stats_widget = self.query_one("#plan_stats_display", Static)
+        plan_label_widget = self.query_one("#plan_label", Static)
 
         plan_text_to_display = ""
-        stats_text = ""
-
-        model_name_for_stats = "N/A"
-        token_count_for_stats = "N/A"
 
         if isinstance(plan_data, tuple):
-            plan_content, model_name, token_count = plan_data
-            self.generated_plan_content = plan_content # Store the actual plan for exit
+            plan_content, model_name, prompt_tokens, completion_tokens, _ = plan_data # total_tokens not used in label
+            self.generated_plan_content = plan_content
             plan_text_to_display = plan_content
-            model_name_for_stats = model_name
-            if token_count is not None:
-                token_count_for_stats = f"{token_count} tokens"
+
+            prompt_tokens_str = str(prompt_tokens) if prompt_tokens is not None else "N/A"
+            completion_tokens_str = str(completion_tokens) if completion_tokens is not None else "N/A"
+            
+            time_taken_str = "N/A"
+            if self._llm_call_start_time is not None:
+                total_elapsed_time = time.monotonic() - self._llm_call_start_time
+                time_taken_str = f"{total_elapsed_time:.2f}s"
+                self._llm_call_start_time = None
+            
+            plan_label_widget.update(
+                f"Generated plan with {model_name} in {time_taken_str} "
+                f"(Tokens in: {prompt_tokens_str}, out: {completion_tokens_str})"
+            )
         else: # It's an error string
-            self.generated_plan_content = plan_data # Store the error message
+            self.generated_plan_content = plan_data
             plan_text_to_display = plan_data
-            # Stats will remain N/A or as defaulted
+            plan_label_widget.update("Plan Generation Failed")
+            if self._llm_call_start_time is not None: # Still reset timer if it was running
+                self._llm_call_start_time = None
+
 
         plan_display_widget.load_text(plan_text_to_display)
-
-        # Prepare stats string
-        if self._llm_call_start_time is not None:
-            total_elapsed_time = time.monotonic() - self._llm_call_start_time
-            stats_text = f"Model: {model_name_for_stats} | Tokens: {token_count_for_stats} | Time: {total_elapsed_time:.2f}s"
-            self._llm_call_start_time = None
-        else:
-            stats_text = f"Model: {model_name_for_stats} | Tokens: {token_count_for_stats} | Time: N/A"
-
-        plan_stats_widget.update(stats_text)
 
         if self._loading_timer is not None:
             self._loading_timer.stop()
