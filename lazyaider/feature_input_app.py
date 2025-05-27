@@ -28,7 +28,7 @@ class FeatureInputApp(App[str | tuple[str, str] | None]):
     BINDINGS = [
         ("escape", "request_quit_or_reset", "Back/Cancel"),
         ("ctrl+o", "open_external_editor", "External Edit"),
-        ("ctrl+p", "edit_planner_prompt", "Edit Planner Prompt"),
+        ("ctrl+k", "edit_planner_prompt", "Edit Planner Prompt"),
     ]
     CSS_PATH = "feature_input_app.tcss"
 
