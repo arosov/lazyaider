@@ -21,7 +21,7 @@ DEFAULT_THEME_NAME = "light" # Textual's default theme
 DEFAULT_LLM_MODEL = "gpt-3.5-turbo" # Default LLM model
 DEFAULT_LLM_API_KEY = None # Default LLM API key
 DEFAULT_PLAN_GENERATION_PROMPT_OVERRIDE_PATH = None # Default global path for prompt override file
-DEFAULT_TEXT_EDITOR = None # Default external text editor command
+DEFAULT_TEXT_EDITOR = "nano" # Default external text editor command
 
 def find_config_file() -> str | None:
     """
