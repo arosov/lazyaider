@@ -2,8 +2,7 @@
 
 LazyAider is a terminal-based tool designed to streamline your development workflow by integrating with tmux and leveraging Large Language Models (LLMs) to help you plan and execute coding tasks. It provides a persistent, session-based environment where you can generate development plans from feature descriptions, manage these plans, and interact with your codebase efficiently.
 
-<!-- Placeholder for a general overview screenshot -->
-<!-- ![LazyAider Overview](path/to/overview_screenshot.png) -->
+![LazyAider Overview](img/whole.png)
 
 ## Features
 
@@ -156,16 +155,15 @@ Generated plans are saved in the `.lazyaider/plans/` directory, organized by a s
 
 ## Configuration File
 
-LazyAider uses a configuration file named `.lazyaider.conf.yml` located in the project's root directory. This YAML file stores settings such as:
+LazyAider uses a configuration file named `.lazyaider.conf.yml` located in your home directory or the project's root directory. This YAML file stores settings such as:
 
 *   `llm_model`: Specifies the language model to be used for plan generation.
 *   `llm_api_key`: Your API key for the chosen language model provider.
 *   `theme_name`: Theme for the Textual application (e.g., "light", "dark").
 *   `text_editor`: The command to launch your preferred external text editor for editing plan sections or descriptions (e.g., `nvim`, `code --wait`).
 *   `managed_sessions`: A dictionary storing information about sessions managed by LazyAider, including the active plan for each session.
-*   `plan_generation_prompt_override_path`: Optional path to a custom prompt template file. This can be set globally or per session.
-    *   **If set (and the file exists), this template will be used by the planner, taking precedence over default prompt.**
-    *   The TUI prompt editor (Ctrl+J) edits `.lazyaider/planner_prompt.md`. For these TUI edits to be used by the planner, ensure `plan_generation_prompt_override_path` is *not* set (or is null/empty) in your `.lazyaider.conf.yml` for the relevant scope (global or session).
+*   `plan_generation_prompt_override_path`: Optional path to a custom prompt template file. This can be set globally or per session but is most useful globally.
+    *   If set (and the file exists), this template will be used by the planner, taking precedence over default prompt.
     *   If `.lazyaider/planner_prompt.md` does not exist when initiating TUI editing, its content will be initialized from the global `plan_generation_prompt_override_path` (if set and valid), otherwise from the default built-in template.
 
 Example snippet from `.lazyaider.conf.yml`:
@@ -185,4 +183,3 @@ plan_generation_prompt_override_path: null # or "path/to/custom_prompt.txt"
 ## License
 
 Distributed under the MIT License. See `LICENSE` for more information.
-(Note: You'll need to add a LICENSE file to your project if you don't have one).
