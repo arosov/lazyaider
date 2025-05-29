@@ -543,18 +543,22 @@ class Sidebar(App):
 
     def _update_section_label_colors(self, last_processed_index: int | None) -> None:
         """Updates the colors of section labels based on the last processed index."""
+        from lazyaider import config as app_config_module # Ensure access to config settings
         try:
             plan_sections_container_widget = self.query_one("#plan_sections_container", Grid)
             num_sections = len(plan_sections_container_widget.children)
+
+            completed_color = app_config_module.settings.get(app_config_module.KEY_LABEL_COLOR_COMPLETED, app_config_module.DEFAULT_LABEL_COLOR_COMPLETED)
+            current_color = app_config_module.settings.get(app_config_module.KEY_LABEL_COLOR_CURRENT, app_config_module.DEFAULT_LABEL_COLOR_CURRENT)
 
             for i in range(num_sections):
                 try:
                     label_to_style = self.query_one(f"#section_label_{i}", Label)
                     if last_processed_index is not None:
                         if i < last_processed_index:
-                            label_to_style.styles.color = "green" # Completed
+                            label_to_style.styles.color = completed_color # Completed
                         elif i == last_processed_index:
-                            label_to_style.styles.color = "cyan"  # Current/Last processed
+                            label_to_style.styles.color = current_color  # Current/Last processed
                         else:
                             label_to_style.styles.color = None    # Upcoming (default/CSS)
                     else:

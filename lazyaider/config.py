@@ -18,6 +18,8 @@ KEY_SESSION_PLAN_PROGRESS = "plan_progress" # Stores progress for each plan with
 KEY_LAST_AIDER_STEP = "last_aider_step" # Stores the index of the last step sent to Aider for a plan
 KEY_TEXT_EDITOR = "text_editor" # Command to launch the external text editor
 KEY_DELAY_SEND_INPUT = "delay_send_input" # Delay in seconds after sending input before Enter/M-Enter
+KEY_LABEL_COLOR_COMPLETED = "label_color_completed" # Color for completed section labels
+KEY_LABEL_COLOR_CURRENT = "label_color_current" # Color for the current/last processed section label
 
 DEFAULT_SIDEPANE_PERCENT_WIDTH = 20
 DEFAULT_THEME_NAME = "light" # Textual's default theme
@@ -26,6 +28,8 @@ DEFAULT_LLM_API_KEY = None # Default LLM API key
 DEFAULT_PLAN_GENERATION_PROMPT_OVERRIDE_PATH = None # Default global path for prompt override file
 DEFAULT_TEXT_EDITOR = "nano" # Default external text editor command
 DEFAULT_DELAY_SEND_INPUT = 0.5 # Default delay in seconds
+DEFAULT_LABEL_COLOR_COMPLETED = "green" # Default color for completed labels
+DEFAULT_LABEL_COLOR_CURRENT = "cyan" # Default color for current label
 
 def find_config_file() -> str | None:
     """
@@ -184,6 +188,24 @@ def load_config() -> dict:
                 print(f"Warning: '{KEY_DELAY_SEND_INPUT}' in {config_path or 'config'} ('{delay_val}') is negative. Using default value {DEFAULT_DELAY_SEND_INPUT}.", file=sys.stderr)
         config[KEY_DELAY_SEND_INPUT] = DEFAULT_DELAY_SEND_INPUT
     # If it was valid and present, it's kept. If it was None (not in config), it's set to default by the above.
+
+    # Ensure label_color_completed is a string
+    if not isinstance(config.get(KEY_LABEL_COLOR_COMPLETED), str):
+        if KEY_LABEL_COLOR_COMPLETED in config: # Value exists but is not a str
+            print(f"Warning: '{KEY_LABEL_COLOR_COMPLETED}' in {config_path or 'config'} is not a string. Using default value.", file=sys.stderr)
+        config[KEY_LABEL_COLOR_COMPLETED] = DEFAULT_LABEL_COLOR_COMPLETED
+    elif not config.get(KEY_LABEL_COLOR_COMPLETED, "").strip(): # Is an empty or whitespace-only string
+        print(f"Warning: '{KEY_LABEL_COLOR_COMPLETED}' in {config_path or 'config'} is empty. Using default value.", file=sys.stderr)
+        config[KEY_LABEL_COLOR_COMPLETED] = DEFAULT_LABEL_COLOR_COMPLETED
+
+    # Ensure label_color_current is a string
+    if not isinstance(config.get(KEY_LABEL_COLOR_CURRENT), str):
+        if KEY_LABEL_COLOR_CURRENT in config: # Value exists but is not a str
+            print(f"Warning: '{KEY_LABEL_COLOR_CURRENT}' in {config_path or 'config'} is not a string. Using default value.", file=sys.stderr)
+        config[KEY_LABEL_COLOR_CURRENT] = DEFAULT_LABEL_COLOR_CURRENT
+    elif not config.get(KEY_LABEL_COLOR_CURRENT, "").strip(): # Is an empty or whitespace-only string
+        print(f"Warning: '{KEY_LABEL_COLOR_CURRENT}' in {config_path or 'config'} is empty. Using default value.", file=sys.stderr)
+        config[KEY_LABEL_COLOR_CURRENT] = DEFAULT_LABEL_COLOR_CURRENT
 
     return config
 
