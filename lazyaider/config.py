@@ -17,6 +17,7 @@ KEY_SESSION_ACTIVE_PLAN_NAME = "active_plan_name" # Stores the active plan direc
 KEY_SESSION_PLAN_PROGRESS = "plan_progress" # Stores progress for each plan within a session
 KEY_LAST_AIDER_STEP = "last_aider_step" # Stores the index of the last step sent to Aider for a plan
 KEY_TEXT_EDITOR = "text_editor" # Command to launch the external text editor
+KEY_DELAY_SEND_INPUT = "delay_send_input" # Delay in seconds after sending input before Enter/M-Enter
 
 DEFAULT_SIDEPANE_PERCENT_WIDTH = 20
 DEFAULT_THEME_NAME = "light" # Textual's default theme
@@ -24,6 +25,7 @@ DEFAULT_LLM_MODEL = "gpt-3.5-turbo" # Default LLM model
 DEFAULT_LLM_API_KEY = None # Default LLM API key
 DEFAULT_PLAN_GENERATION_PROMPT_OVERRIDE_PATH = None # Default global path for prompt override file
 DEFAULT_TEXT_EDITOR = "nano" # Default external text editor command
+DEFAULT_DELAY_SEND_INPUT = 0.5 # Default delay in seconds
 
 def find_config_file() -> str | None:
     """
@@ -168,6 +170,20 @@ def load_config() -> dict:
         config[KEY_TEXT_EDITOR] = None
     elif KEY_TEXT_EDITOR not in config: # Not present at all
         config[KEY_TEXT_EDITOR] = DEFAULT_TEXT_EDITOR
+
+    # Ensure delay_send_input is a non-negative float or int
+    delay_val = config.get(KEY_DELAY_SEND_INPUT)
+    is_valid_type = isinstance(delay_val, (float, int))
+    is_valid_value = is_valid_type and delay_val >= 0
+
+    if not is_valid_value:
+        if KEY_DELAY_SEND_INPUT in config: # Key exists but value is invalid
+            if not is_valid_type:
+                print(f"Warning: '{KEY_DELAY_SEND_INPUT}' in {config_path or 'config'} is not a number. Using default value {DEFAULT_DELAY_SEND_INPUT}.", file=sys.stderr)
+            elif delay_val < 0: # is_valid_type must be true here
+                print(f"Warning: '{KEY_DELAY_SEND_INPUT}' in {config_path or 'config'} ('{delay_val}') is negative. Using default value {DEFAULT_DELAY_SEND_INPUT}.", file=sys.stderr)
+        config[KEY_DELAY_SEND_INPUT] = DEFAULT_DELAY_SEND_INPUT
+    # If it was valid and present, it's kept. If it was None (not in config), it's set to default by the above.
 
     return config
 

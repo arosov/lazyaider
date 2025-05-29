@@ -1,3 +1,4 @@
+import asyncio
 import subprocess # Still needed for CalledProcessError
 import re # For parsing markdown sections
 import shutil # For file copying
@@ -409,13 +410,18 @@ class Sidebar(App):
                 full_prompt_content = prompt_chunk.strip()
 
                 try:
+                    from lazyaider import config as app_config_module # Ensure access to config
+                    delay_value = app_config_module.settings.get(
+                        app_config_module.KEY_DELAY_SEND_INPUT,
+                        app_config_module.DEFAULT_DELAY_SEND_INPUT
+                    )
+
                     if not full_prompt_content: # Check if content is empty
                         self.log.warning(f"Prompt content for section {section_index} is empty. Sending command prefix '{aider_command_prefix.strip()}' only with Enter.")
                         tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, aider_command_prefix.strip())
+                        await asyncio.sleep(delay_value)
                         tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter")
                         return
-
-                    from lazyaider import config as app_config_module # Ensure access to config
 
                     # New sending logic for non-empty content
                     self.log(f"Sending section {section_index} ({action_type}) to Aider using /multiline wrapper.")
@@ -430,6 +436,9 @@ class Sidebar(App):
                     # This is the desired behavior when Aider is in /multiline input mode.
                     tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f"{aider_command_prefix}{full_prompt_content}")
                     self.log(f"Sent to Aider (content): {aider_command_prefix.strip()} {full_prompt_content[:100]}...")
+
+                    # 2.5 Sleep after sending content before M-Enter
+                    await asyncio.sleep(delay_value)
 
                     # 3. Send M-Enter to signal end of multiline input block to Aider
                     tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "M-Enter")
