@@ -554,7 +554,7 @@ class Sidebar(App):
                         if i < last_processed_index:
                             label_to_style.styles.color = "green" # Completed
                         elif i == last_processed_index:
-                            label_to_style.styles.color = "blue"  # Current/Last processed
+                            label_to_style.styles.color = "cyan"  # Current/Last processed
                         else:
                             label_to_style.styles.color = None    # Upcoming (default/CSS)
                     else:
