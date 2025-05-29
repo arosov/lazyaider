@@ -23,7 +23,7 @@ KEY_LABEL_COLOR_CURRENT = "label_color_current" # Color for the current/last pro
 
 DEFAULT_SIDEPANE_PERCENT_WIDTH = 20
 DEFAULT_THEME_NAME = "light" # Textual's default theme
-DEFAULT_LLM_MODEL = "gpt-3.5-turbo" # Default LLM model
+DEFAULT_LLM_MODEL = "gemini-2.5-pro-preview-05-06" # Default LLM model
 DEFAULT_LLM_API_KEY = None # Default LLM API key
 DEFAULT_PLAN_GENERATION_PROMPT_OVERRIDE_PATH = None # Default global path for prompt override file
 DEFAULT_TEXT_EDITOR = "nano" # Default external text editor command
