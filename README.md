@@ -157,14 +157,24 @@ Generated plans are saved in the `.lazyaider/plans/` directory, organized by a s
 
 LazyAider uses a configuration file named `.lazyaider.conf.yml` located in your home directory or the project's root directory. This YAML file stores settings such as:
 
-*   `llm_model`: Specifies the language model to be used for plan generation.
-*   `llm_api_key`: Your API key for the chosen language model provider.
-*   `theme_name`: Theme for the Textual application (e.g., "light", "dark").
-*   `text_editor`: The command to launch your preferred external text editor for editing plan sections or descriptions (e.g., `nvim`, `code --wait`).
-*   `managed_sessions`: A dictionary storing information about sessions managed by LazyAider, including the active plan for each session.
-*   `plan_generation_prompt_override_path`: Optional path to a custom prompt template file. This can be set globally or per session but is most useful globally.
-    *   If set (and the file exists), this template will be used by the planner, taking precedence over default prompt.
-    *   If `.lazyaider/planner_prompt.md` does not exist when initiating TUI editing, its content will be initialized from the global `plan_generation_prompt_override_path` (if set and valid), otherwise from the default built-in template.
+*   `llm_model`: Specifies the language model to be used for plan generation (e.g., "gpt-4-turbo"). Default: "gpt-3.5-turbo".
+*   `llm_api_key`: Your API key for the chosen language model provider. Store securely. Default: None.
+*   `theme_name`: Theme for the Textual application (e.g., "light", "dark"). Default: "light".
+*   `text_editor`: The command to launch your preferred external text editor for editing plan sections or descriptions (e.g., `nvim`, `code --wait`). Default: "nano".
+*   `sidepane_percent_width`: The percentage of the terminal width that the LazyAider sidebar will occupy. Default: 20.
+*   `delay_send_input`: Delay in seconds after sending input to the shell (e.g., via "Send to Shell" button) before an Enter key press is simulated. Useful if your shell or Aider needs a moment to process the pasted input. Default: 0.5.
+*   `label_color_completed`: The color for the labels of completed plan sections in the sidebar. Uses Textual color names (e.g., "green", "blue", "rgb(0,255,0)"). Default: "green".
+*   `label_color_current`: The color for the label of the current or last processed plan section in the sidebar. Default: "cyan".
+*   `managed_sessions`: A dictionary storing information about sessions managed by LazyAider.
+    *   Each key is a session name (e.g., `lazyaider-session`).
+    *   The value is a dictionary containing session-specific settings:
+        *   `active_plan_name`: The name of the currently active plan for this session.
+        *   `plan_progress`: A dictionary where keys are plan names and values are dictionaries storing progress for that plan, primarily:
+            *   `last_aider_step`: The index of the last plan section that was processed or sent to Aider.
+        *   `plan_generation_prompt_override_path`: Session-specific path to a custom prompt template, overriding the global one for this session.
+*   `plan_generation_prompt_override_path`: Optional global path to a custom prompt template file. This can be an absolute path or relative to the config file's location.
+    *   If set (and the file exists), this template will be used by the planner, taking precedence over the default prompt.
+    *   If `.lazyaider/planner_prompt.md` does not exist when initiating TUI editing, its content will be initialized from this global path (if set and valid), otherwise from the default built-in template. Default: None.
 
 Example snippet from `.lazyaider.conf.yml`:
 ```yaml
@@ -172,12 +182,20 @@ llm_model: "gpt-4-turbo"
 llm_api_key: "sk-your_api_key_here" # Store securely!
 theme_name: "dark"
 text_editor: "nvim"
+sidepane_percent_width: 25
+delay_send_input: 0.2
+label_color_completed: "bright_green"
+label_color_current: "yellow"
 managed_sessions:
   lazyaider-session:
     active_plan_name: "implement-user-auth"
+    plan_progress:
+      "implement-user-auth":
+        last_aider_step: 2
+    plan_generation_prompt_override_path: "path/to/session_specific_prompt.md"
   another-project:
     active_plan_name: null
-plan_generation_prompt_override_path: null # or "path/to/custom_prompt.txt"
+plan_generation_prompt_override_path: "global_prompts/my_default_planner.md" # or null
 ```
 
 ## License
