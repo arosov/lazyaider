@@ -157,7 +157,7 @@ Generated plans are saved in the `.lazyaider/plans/` directory, organized by a s
 
 LazyAider uses a configuration file named `.lazyaider.conf.yml` located in your home directory or the project's root directory. This YAML file stores settings such as:
 
-*   `llm_model`: Specifies the language model to be used for plan generation (e.g., "gpt-4-turbo"). Default: "gemini-2.5-pro-preview-05-06".
+*   `llm_model`: Specifies the language model to be used for plan generation (e.g., "gpt-4-turbo"). Default: "gemini-2.5-pro-preview-05-06". LazyAider uses `litellm` to interact with LLMs, so for advanced model-specific configurations (e.g., enabling reasoning/tool use, setting temperature), refer to the [LiteLLM documentation on providers](https://docs.litellm.ai/docs/providers).
 *   `llm_api_key`: Your API key for the chosen language model provider. Store securely. Default: None.
 *   `theme_name`: Theme for the Textual application (e.g., "light", "dark"). Default: "light".
 *   `text_editor`: The command to launch your preferred external text editor for editing plan sections or descriptions (e.g., `nvim`, `code --wait`). Default: "nano".
