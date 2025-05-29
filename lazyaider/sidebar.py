@@ -1,4 +1,5 @@
 import asyncio
+import random
 import subprocess # Still needed for CalledProcessError
 import re # For parsing markdown sections
 import shutil # For file copying
@@ -419,37 +420,45 @@ class Sidebar(App):
                     if not full_prompt_content: # Check if content is empty
                         self.log.warning(f"Prompt content for section {section_index} is empty. Sending command prefix '{aider_command_prefix.strip()}' only with Enter.")
                         tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, aider_command_prefix.strip())
-                        await asyncio.sleep(delay_value)
                         tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter")
                         return
 
-                    # New sending logic for non-empty content
-                    self.log(f"Sending section {section_index} ({action_type}) to Aider using /multiline wrapper.")
+                    # New sending logic for non-empty content using tags
+                    self.log(f"Sending section {section_index} ({action_type}) to Aider using tag-based multiline input.")
 
-                    # 1. Start multiline mode in Aider
-                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "/multiline")
+                    # Generate a random 8-digit number for the tag
+                    tag_id = f"{random.randint(10000000, 99999999)}"
+                    opening_tag = f"{{tag{tag_id}"
+                    closing_tag = f"tag{tag_id}}}"
+
+                    # 1. Send the opening tag on its own line.
+                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, opening_tag)
                     tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter")
-                    self.log("Sent to Aider: /multiline (start)")
+                    self.log(f"Sent to Aider: {opening_tag}")
 
-                    # 2. Send the command prefix and the full prompt content
-                    # Newlines in full_prompt_content will be sent as Enter key presses by send_keys_to_pane.
-                    # This is the desired behavior when Aider is in /multiline input mode.
-                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, f"{aider_command_prefix}{full_prompt_content}")
-                    self.log(f"Sent to Aider (content): {aider_command_prefix.strip()} {full_prompt_content[:100]}...")
+                    # 2. Send the command prefix and the full prompt content.
+                    # Newlines in full_prompt_content are handled by send_keys_to_pane.
+                    content_to_send = f"{aider_command_prefix.strip()} {full_prompt_content}"
+                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, content_to_send)
+                    self.log(f"Sent to Aider (content): {content_to_send[:100]}...")
 
-                    # 2.5 Sleep after sending content before M-Enter
+                    # Ensure content is followed by a newline before the closing tag,
+                    # so the closing tag starts on a new line.
+                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter")
+                    self.log("Sent to Aider: Enter (after content to ensure closing tag is on new line)")
+
+                    # 3. Sleep after sending content and its trailing Enter, before closing tag and final submission.
                     await asyncio.sleep(delay_value)
 
-                    # 3. Send M-Enter to signal end of multiline input block to Aider
-                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "M-Enter")
-                    self.log("Sent to Aider: M-Enter")
+                    # 4. Send the closing tag on its own line.
+                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, closing_tag)
+                    self.log(f"Sent to Aider: {closing_tag}")
 
-                    # 4. Send /multiline again to toggle off and submit the accumulated message
-                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "/multiline")
-                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "M-Enter") # This Enter submits the command
-                    self.log("Sent to Aider: /multiline (end and submit)")
+                    # 5. Send the final Enter to submit the entire tagged block.
+                    tmux_utils.send_keys_to_pane(self.TMUX_TARGET_PANE, "Enter")
+                    self.log("Sent to Aider: Enter (to submit tagged block)")
 
-                    self.log(f"Submitted command to Aider for section {section_index} ({action_type}) using /multiline wrapper.")
+                    self.log(f"Submitted command to Aider for section {section_index} ({action_type}) using tag-based input.")
 
                     # Save the last successfully processed step
                     if self.TMUX_SESSION_NAME and self.current_selected_plan_name:
