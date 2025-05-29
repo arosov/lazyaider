@@ -33,9 +33,8 @@ def generate_plan(
 
     if not model_from_config:
         # Fallback if 'llm_model' is not in config or is empty.
-        # This default should ideally match or be consistent with config.py's DEFAULT_LLM_MODEL
-        model = "gpt-3.5-turbo"
-        print(f"Warning: 'llm_model' not found or empty in config. Using default: {model}", file=sys.stderr)
+        model = config.DEFAULT_LLM_MODEL
+        print(f"Warning: '{config.KEY_LLM_MODEL}' not found or empty in config. Using default: {model}", file=sys.stderr)
     else:
         model = model_from_config
 
@@ -242,7 +241,7 @@ if __name__ == '__main__':
     # The generate_plan function itself will print warnings if keys are missing for common models.
 
     # A default model for testing if config isn't fully set up or accessible here
-    test_model_name = config.settings.get(config.KEY_LLM_MODEL) if 'config' in globals() and hasattr(config, 'settings') else "gpt-3.5-turbo"
+    test_model_name = config.settings.get(config.KEY_LLM_MODEL) if 'config' in globals() and hasattr(config, 'settings') else config.DEFAULT_LLM_MODEL
 
     print(f"Using model: {test_model_name} (from config or default for test)")
 
