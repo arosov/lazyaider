@@ -163,8 +163,8 @@ LazyAider uses a configuration file named `.lazyaider.conf.yml` located in your 
 *   `text_editor`: The command to launch your preferred external text editor for editing plan sections or descriptions (e.g., `nvim`, `code --wait`). Default: "nano".
 *   `sidepane_percent_width`: The percentage of the terminal width that the LazyAider sidebar will occupy. Default: 20.
 *   `delay_send_input`: Delay in seconds after sending input to the shell (e.g., via "Send to Shell" button) before an Enter key press is simulated. Useful if your shell or Aider needs a moment to process the pasted input. Default: 0.5.
-*   `label_color_completed`: The color for the labels of completed plan sections in the sidebar. Uses Textual color names (e.g., "green", "blue", "rgb(0,255,0)"). Default: "green".
-*   `label_color_current`: The color for the label of the current or last processed plan section in the sidebar. Default: "cyan".
+*   `label_color_completed`: The color for the labels of completed plan sections in the sidebar. Uses Textual color names (e.g., "green", "blue", "rgb(0,255,0)"). See [Textual Color API](https://textual.textualize.io/api/color/) for more options. Default: "green".
+*   `label_color_current`: The color for the label of the current or last processed plan section in the sidebar. See [Textual Color API](https://textual.textualize.io/api/color/) for more options. Default: "cyan".
 *   `managed_sessions`: A dictionary storing information about sessions managed by LazyAider.
     *   Each key is a session name (e.g., `lazyaider-session`).
     *   The value is a dictionary containing session-specific settings:
