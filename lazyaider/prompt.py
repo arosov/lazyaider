@@ -18,7 +18,7 @@ The output MUST be a Markdown document with the following structure:
 
 ## 1: [Descriptive Title for Step 1]
 
-- **Files to add to Aider:** List the specific file paths that should be added to Aider for this step (e.g., `/add path/to/file.py new_file.py`). Use a Markdown bullet list.
+- **Files to add to Aider:** List the specific file paths that should be added to Aider for this step (e.g., `/add path/to/file.py new_file.py`). Use a Markdown bullet list. Only add existing files. If the instructions requires modifying or checking an existing file, add it in this list.
 
 - **Goal:** Briefly state the objective of this step.
 
